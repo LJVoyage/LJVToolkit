@@ -1,0 +1,11 @@
+{
+  "name": "com.ljvoyage.toolkit",
+  "version": "1.0.0",
+  "displayName": "LJVoyage Toolkit",
+  "description": "A collection of Unity utility functions and extensions.",
+  "unity": "2022.3",
+  "author": {
+    "name": "LJVoyage",
+    "url": "https://github.com/LJVoyage"
+  }
+}
