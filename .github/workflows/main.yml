@@ -1,9 +1,11 @@
 name: Publish LJV Toolkit
 
 on:
-  push:
-    tags:
-      - "v*"
+  workflow_dispatch:
+    inputs:
+      release_version:
+        description: 'Version to release (optional, leave empty to auto patch increment)'
+        required: false
 
 permissions:
   contents: write
@@ -25,67 +27,78 @@ jobs:
         with:
           node-version: 18
 
-      # 3️⃣ 同步 package.json 版本号（去掉 v）
-      - name: Sync package.json version with tag
-        run: |
-          TAG_VER=${GITHUB_REF_NAME#v}   # 去掉 v 前缀
-          echo "🔄 Syncing package.json version to $TAG_VER ..."
-          node -e "let fs=require('fs');let p=require('./package.json');p.version='${TAG_VER}';fs.writeFileSync('./package.json', JSON.stringify(p,null,2));"
+      # 3️⃣ 安装 semver 工具
+      - name: Install semver
+        run: npm install -g semver
 
+      # 4️⃣ 确定版本号（手动输入或自动 patch 递增）
+      - name: Determine version
+        id: version
+        run: |
+          INPUT_VER="${{ github.event.inputs.release_version }}"
+          if [ -n "$INPUT_VER" ]; then
+            NEW_VER="$INPUT_VER"
+          else
+            CURRENT_VER=$(node -p "require('./package.json').version")
+            NEW_VER=$(npx semver $CURRENT_VER -i patch)
+          fi
+          echo "Determined version: $NEW_VER"
+          echo "new_version=$NEW_VER" >> $GITHUB_OUTPUT
+
+      # 5️⃣ 同步 package.json 版本号
+      - name: Update package.json version
+        run: |
+          NEW_VER=${{ steps.version.outputs.new_version }}
+          echo "🔄 Setting package.json version to $NEW_VER"
+          node -e "let fs=require('fs');let p=require('./package.json');p.version='${NEW_VER}';fs.writeFileSync('./package.json', JSON.stringify(p,null,2));"
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
           git add package.json
-          git commit -m "chore: sync version to ${TAG_VER}" || echo "No changes to commit"
+          git commit -m "chore: set version to ${NEW_VER}" || echo "No changes to commit"
+          git push origin HEAD:main
 
-          DEFAULT_BRANCH=$(git remote show origin | grep 'HEAD branch' | awk '{print $NF}')
-          echo "🌿 Default branch: $DEFAULT_BRANCH"
-          git push origin HEAD:${DEFAULT_BRANCH}
-
-      # 4️⃣ 验证版本号一致性
-      - name: Verify synced version
-        run: |
-          PKG_VER=$(node -p "require('./package.json').version")
-          TAG_VER=${GITHUB_REF_NAME#v}
-          echo "Tag: $TAG_VER"
-          echo "Package: $PKG_VER"
-          if [ "$PKG_VER" != "$TAG_VER" ]; then
-            echo "❌ Version mismatch!"
-            exit 1
-          fi
-          echo "✅ Version successfully synced!"
-
-      # 5️⃣ 自动生成 CHANGELOG.md 内容
+      # 6️⃣ 自动生成 CHANGELOG.md 内容
       - name: Generate changelog
         id: changelog
         run: |
-          echo "📝 Generating changelog for $GITHUB_REF_NAME ..."
+          NEW_VER=${{ steps.version.outputs.new_version }}
           LAST_TAG=$(git describe --tags --abbrev=0 @^ 2>/dev/null || echo "")
           if [ -n "$LAST_TAG" ]; then
-            echo "Comparing from $LAST_TAG to $GITHUB_REF_NAME"
             git log $LAST_TAG..HEAD --pretty=format:"- %s" > CHANGELOG_TEMP.md
           else
             echo "- Initial release" > CHANGELOG_TEMP.md
           fi
           echo "changelog_path=CHANGELOG_TEMP.md" >> $GITHUB_OUTPUT
 
-      # 6️⃣ 创建 GitHub Release（带 changelog）
+      # 7️⃣ 创建 Git tag 并 push
+      - name: Create Git tag
+        run: |
+          NEW_VER=${{ steps.version.outputs.new_version }}
+          git tag -f v${NEW_VER}
+          git push origin v${NEW_VER} --force
+
+      # 8️⃣ 创建 GitHub Release（带 changelog）
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          name: "LJV Toolkit ${{ github.ref_name }}"
+          tag_name: v${{ steps.version.outputs.new_version }}
+          name: "LJV Toolkit v${{ steps.version.outputs.new_version }}"
           body_path: ${{ steps.changelog.outputs.changelog_path }}
+          overwrite_files: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # 7️⃣ 通知 OpenUPM 自动构建
-      - name: Trigger OpenUPM build
+      # 9️⃣ 验证版本号
+      - name: Verify version
         run: |
-          PACKAGE_NAME="com.ljvoyage.ljvtoolkit"
-          echo "🚀 Triggering OpenUPM build for ${PACKAGE_NAME}"
-          curl -X POST https://package.openupm.com/api/builds \
-            -H "Content-Type: application/json" \
-            -d "{\"packageName\": \"${PACKAGE_NAME}\"}"
+          PKG_VER=$(node -p "require('./package.json').version")
+          TAG_VER=${{ steps.version.outputs.new_version }}
+          if [ "$PKG_VER" != "$TAG_VER" ]; then
+            echo "❌ Version mismatch!"
+            exit 1
+          fi
+          echo "✅ Version successfully synced with tag!"
 
-      # 8️⃣ 完成提示
+      # 🔟 完成提示
       - name: Done
-        run: echo "🎉 Publish pipeline for $GITHUB_REF_NAME completed successfully!"
+        run: echo "🎉 Publish pipeline completed successfully! OpenUPM will automatically build the new version once the tag is pushed."
