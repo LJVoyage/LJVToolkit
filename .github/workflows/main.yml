@@ -1,0 +1,69 @@
+name: Publish LJV Toolkit
+
+on:
+  push:
+    tags:
+      - "v*" # 当推送以 v 开头的 tag（如 v1.0.0）时触发
+
+jobs:
+  build-and-release:
+    name: Validate & Release
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1️⃣ 检出仓库
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # 必须拉取完整历史以读取 tag
+
+      # 2️⃣ 安装 Node 环境（用于检查版本）
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      # 3️⃣ 检查 package.json 版本与 tag 是否匹配
+      - name: Validate package version
+        run: |
+          PKG_VER=$(node -p "require('./package.json').version")
+          TAG_VER=${GITHUB_REF_NAME#v}
+          echo "🔍 Checking version consistency..."
+          echo "Tag version: $TAG_VER"
+          echo "Package version: $PKG_VER"
+          if [ "$PKG_VER" != "$TAG_VER" ]; then
+            echo "❌ Version mismatch between tag ($TAG_VER) and package.json ($PKG_VER)"
+            exit 1
+          fi
+          echo "✅ Version check passed"
+
+      # 4️⃣ 可选：安装 openupm-cli，用于验证构建（非发布）
+      - name: Install openupm-cli
+        run: npm install -g openupm-cli
+
+      # 5️⃣ 验证 OpenUPM 打包流程（不上传，仅测试）
+      - name: Verify OpenUPM build
+        run: openupm build
+
+      # 6️⃣ 自动生成简易 changelog
+      - name: Generate changelog
+        id: changelog
+        run: |
+          echo "📝 Generating changelog for $GITHUB_REF_NAME"
+          echo "## Changes in $GITHUB_REF_NAME" > CHANGELOG_TEMP.md
+          git log -1 --pretty=format:"- %s" >> CHANGELOG_TEMP.md
+          echo "" >> CHANGELOG_TEMP.md
+          echo "changelog_path=CHANGELOG_TEMP.md" >> $GITHUB_OUTPUT
+
+      # 7️⃣ 创建 GitHub Release（带 changelog）
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "LJV Toolkit ${{ github.ref_name }}"
+          body_path: ${{ steps.changelog.outputs.changelog_path }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # 8️⃣ 输出结果
+      - name: Done
+        run: echo "🎉 Successfully processed tag $GITHUB_REF_NAME"
