@@ -3,30 +3,26 @@ name: Publish LJV Toolkit
 on:
   push:
     tags:
-      - "v*" # 当推送以 v 开头的 tag（如 v1.0.0）时触发
+      - "v*"
 
 permissions:
   contents: write
 
 jobs:
   build-and-release:
-    name: Auto Sync Version & Release
     runs-on: ubuntu-latest
 
     steps:
-      # 1️⃣ 检出仓库
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      # 2️⃣ 安装 Node.js（用于读取和写入 package.json）
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 18
 
-      # 3️⃣ 自动同步 package.json 版本号与 tag 一致
       - name: Sync package.json version with tag
         run: |
           TAG_VER=${GITHUB_REF_NAME#v}
@@ -36,48 +32,17 @@ jobs:
           git config user.email "github-actions@github.com"
           git add package.json
           git commit -m "chore: sync version to ${TAG_VER}" || echo "No changes to commit"
-          git push origin HEAD:${GITHUB_REF_NAME%/*}/$(git rev-parse --abbrev-ref HEAD)
 
-      # 4️⃣ 验证同步结果
-      - name: Validate synced version
+          DEFAULT_BRANCH=$(git remote show origin | grep 'HEAD branch' | awk '{print $NF}')
+          echo "🌿 Default branch: $DEFAULT_BRANCH"
+          git push origin HEAD:${DEFAULT_BRANCH}
+
+      - name: Verify synced version
         run: |
           PKG_VER=$(node -p "require('./package.json').version")
           TAG_VER=${GITHUB_REF_NAME#v}
-          echo "✅ Tag: $TAG_VER"
-          echo "✅ package.json: $PKG_VER"
           if [ "$PKG_VER" != "$TAG_VER" ]; then
-            echo "❌ Version still mismatched!"
+            echo "❌ Version mismatch!"
             exit 1
           fi
-          echo "🎉 Version successfully synced"
-
-      # 5️⃣ 安装 openupm-cli（可验证包结构）
-      - name: Install openupm-cli
-        run: npm install -g openupm-cli
-
-      # 6️⃣ 验证包能否正常构建
-      - name: Verify OpenUPM build
-        run: openupm build
-
-      # 7️⃣ 生成 changelog
-      - name: Generate changelog
-        id: changelog
-        run: |
-          echo "📝 Generating changelog for $GITHUB_REF_NAME"
-          echo "## Changes in $GITHUB_REF_NAME" > CHANGELOG_TEMP.md
-          git log -1 --pretty=format:"- %s" >> CHANGELOG_TEMP.md
-          echo "" >> CHANGELOG_TEMP.md
-          echo "changelog_path=CHANGELOG_TEMP.md" >> $GITHUB_OUTPUT
-
-      # 8️⃣ 创建 GitHub Release（带 changelog）
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          name: "LJV Toolkit ${{ github.ref_name }}"
-          body_path: ${{ steps.changelog.outputs.changelog_path }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      # 9️⃣ 完成
-      - name: Done
-        run: echo "✅ Tag $GITHUB_REF_NAME processed and released!"
+          echo "✅ Version successfully synced!"
