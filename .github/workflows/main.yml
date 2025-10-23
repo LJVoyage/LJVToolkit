@@ -25,10 +25,10 @@ jobs:
         with:
           node-version: 18
 
-      # 3️⃣ 同步 package.json 版本号（保留 v）
+      # 3️⃣ 同步 package.json 版本号（去掉 v）
       - name: Sync package.json version with tag
         run: |
-          TAG_VER=${GITHUB_REF_NAME}   # 保留 v 前缀
+          TAG_VER=${GITHUB_REF_NAME#v}   # 去掉 v 前缀
           echo "🔄 Syncing package.json version to $TAG_VER ..."
           node -e "let fs=require('fs');let p=require('./package.json');p.version='${TAG_VER}';fs.writeFileSync('./package.json', JSON.stringify(p,null,2));"
 
@@ -45,7 +45,7 @@ jobs:
       - name: Verify synced version
         run: |
           PKG_VER=$(node -p "require('./package.json').version")
-          TAG_VER=${GITHUB_REF_NAME}
+          TAG_VER=${GITHUB_REF_NAME#v}
           echo "Tag: $TAG_VER"
           echo "Package: $PKG_VER"
           if [ "$PKG_VER" != "$TAG_VER" ]; then
