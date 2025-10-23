@@ -13,13 +13,13 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1️⃣ 检出代码
+      # 1️⃣ 检出仓库
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      # 2️⃣ 设置 Node.js
+      # 2️⃣ 安装 Node.js
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -28,32 +28,33 @@ jobs:
       # 3️⃣ 同步 package.json 版本号（保留 v）
       - name: Sync package.json version with tag
         run: |
-          TAG_VER=${GITHUB_REF_NAME}   # 不去掉 v
+          TAG_VER=${GITHUB_REF_NAME}   # 保留 v 前缀
           echo "🔄 Syncing package.json version to $TAG_VER ..."
           node -e "let fs=require('fs');let p=require('./package.json');p.version='${TAG_VER}';fs.writeFileSync('./package.json', JSON.stringify(p,null,2));"
+
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
           git add package.json
-          git commit -m \"chore: sync version to ${TAG_VER}\" || echo \"No changes to commit\"
+          git commit -m "chore: sync version to ${TAG_VER}" || echo "No changes to commit"
 
           DEFAULT_BRANCH=$(git remote show origin | grep 'HEAD branch' | awk '{print $NF}')
-          echo \"🌿 Default branch: $DEFAULT_BRANCH\"
+          echo "🌿 Default branch: $DEFAULT_BRANCH"
           git push origin HEAD:${DEFAULT_BRANCH}
 
-      # 4️⃣ 验证版本一致性
+      # 4️⃣ 验证版本号一致性
       - name: Verify synced version
         run: |
           PKG_VER=$(node -p "require('./package.json').version")
           TAG_VER=${GITHUB_REF_NAME}
+          echo "Tag: $TAG_VER"
+          echo "Package: $PKG_VER"
           if [ "$PKG_VER" != "$TAG_VER" ]; then
             echo "❌ Version mismatch!"
-            echo "Tag: $TAG_VER"
-            echo "Package: $PKG_VER"
             exit 1
           fi
           echo "✅ Version successfully synced!"
 
-      # 5️⃣ 生成 changelog
+      # 5️⃣ 自动生成 CHANGELOG.md 内容
       - name: Generate changelog
         id: changelog
         run: |
@@ -63,11 +64,11 @@ jobs:
             echo "Comparing from $LAST_TAG to $GITHUB_REF_NAME"
             git log $LAST_TAG..HEAD --pretty=format:"- %s" > CHANGELOG_TEMP.md
           else
-            echo "Initial release" > CHANGELOG_TEMP.md
+            echo "- Initial release" > CHANGELOG_TEMP.md
           fi
           echo "changelog_path=CHANGELOG_TEMP.md" >> $GITHUB_OUTPUT
 
-      # 6️⃣ 创建 Release
+      # 6️⃣ 创建 GitHub Release（带 changelog）
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
@@ -76,7 +77,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # 7️⃣ 通知 OpenUPM 重新构建
+      # 7️⃣ 通知 OpenUPM 自动构建
       - name: Trigger OpenUPM build
         run: |
           PACKAGE_NAME="com.ljvoyage.ljvtoolkit"
@@ -87,4 +88,4 @@ jobs:
 
       # 8️⃣ 完成提示
       - name: Done
-        run: echo "✅ Published with version including 'v' prefix!"
+        run: echo "🎉 Publish pipeline for $GITHUB_REF_NAME completed successfully!"
