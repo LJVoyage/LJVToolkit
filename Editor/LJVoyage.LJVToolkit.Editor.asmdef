@@ -1,3 +1,16 @@
 {
-	"name": "LJVoyage.LJVToolkit.Editor"
+    "name": "LJVoyage.LJVToolkit.Editor",
+    "rootNamespace": "",
+    "references": [
+        "GUID:0286d4cd81cb0c245a7c127e333f132c"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
 }
