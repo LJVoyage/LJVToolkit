@@ -7,7 +7,7 @@ on:
 
 jobs:
   build-and-release:
-    name: Validate & Release
+    name: Auto Sync Version & Release
     runs-on: ubuntu-latest
 
     steps:
@@ -15,37 +15,48 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # 必须拉取完整历史以读取 tag
+          fetch-depth: 0
 
-      # 2️⃣ 安装 Node 环境（用于检查版本）
+      # 2️⃣ 安装 Node.js（用于读取和写入 package.json）
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 18
 
-      # 3️⃣ 检查 package.json 版本与 tag 是否匹配
-      - name: Validate package version
+      # 3️⃣ 自动同步 package.json 版本号与 tag 一致
+      - name: Sync package.json version with tag
+        run: |
+          TAG_VER=${GITHUB_REF_NAME#v}
+          echo "🔄 Syncing package.json version to $TAG_VER ..."
+          node -e "let fs=require('fs');let p=require('./package.json');p.version='${TAG_VER}';fs.writeFileSync('./package.json', JSON.stringify(p,null,2));"
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add package.json
+          git commit -m "chore: sync version to ${TAG_VER}" || echo "No changes to commit"
+          git push origin HEAD:${GITHUB_REF_NAME%/*}/$(git rev-parse --abbrev-ref HEAD)
+
+      # 4️⃣ 验证同步结果
+      - name: Validate synced version
         run: |
           PKG_VER=$(node -p "require('./package.json').version")
           TAG_VER=${GITHUB_REF_NAME#v}
-          echo "🔍 Checking version consistency..."
-          echo "Tag version: $TAG_VER"
-          echo "Package version: $PKG_VER"
+          echo "✅ Tag: $TAG_VER"
+          echo "✅ package.json: $PKG_VER"
           if [ "$PKG_VER" != "$TAG_VER" ]; then
-            echo "❌ Version mismatch between tag ($TAG_VER) and package.json ($PKG_VER)"
+            echo "❌ Version still mismatched!"
             exit 1
           fi
-          echo "✅ Version check passed"
+          echo "🎉 Version successfully synced"
 
-      # 4️⃣ 可选：安装 openupm-cli，用于验证构建（非发布）
+      # 5️⃣ 安装 openupm-cli（可验证包结构）
       - name: Install openupm-cli
         run: npm install -g openupm-cli
 
-      # 5️⃣ 验证 OpenUPM 打包流程（不上传，仅测试）
+      # 6️⃣ 验证包能否正常构建
       - name: Verify OpenUPM build
         run: openupm build
 
-      # 6️⃣ 自动生成简易 changelog
+      # 7️⃣ 生成 changelog
       - name: Generate changelog
         id: changelog
         run: |
@@ -55,7 +66,7 @@ jobs:
           echo "" >> CHANGELOG_TEMP.md
           echo "changelog_path=CHANGELOG_TEMP.md" >> $GITHUB_OUTPUT
 
-      # 7️⃣ 创建 GitHub Release（带 changelog）
+      # 8️⃣ 创建 GitHub Release（带 changelog）
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
@@ -64,6 +75,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # 8️⃣ 输出结果
+      # 9️⃣ 完成
       - name: Done
-        run: echo "🎉 Successfully processed tag $GITHUB_REF_NAME"
+        run: echo "✅ Tag $GITHUB_REF_NAME processed and released!"
