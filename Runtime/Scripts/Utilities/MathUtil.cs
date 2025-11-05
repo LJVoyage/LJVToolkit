@@ -6,12 +6,12 @@ using UnityEngine;
 namespace LJVoyage.LJVToolkit.Runtime.Utilities
 {
     /// <summary>
-    /// 
+    /// 数学工具类
     /// </summary>
     public static class MathUtil
     {
         /// <summary>
-        ///  
+        /// 映射一个值从一个范围到另一个范围。
         /// </summary>
         /// <param name="value"></param>
         /// <param name="inMin"></param>
