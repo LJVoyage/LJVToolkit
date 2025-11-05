@@ -21,3 +21,15 @@ namespace LJVoyage.Toolkit.Runtime.Utilities
         }
     }
 }
+```
+
+##  安装方法
+
+添加 scoped registries
+{
+  "name": "OpenUPM",
+  "url": "https://package.openupm.com",
+  "scopes": [
+    "com.ljvoyage"
+  ]
+}
