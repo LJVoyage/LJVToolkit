@@ -1,0 +1,24 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" xsi="http://www.w3.org/2001/XMLSchema-instance" engine="UnityEngine.UIElements" editor="UnityEditor.UIElements" noNamespaceSchemaLocation="../../../../../../UIElementsSchema/UIElements.xsd" editor-extension-mode="True">
+    <ui:VisualElement style="flex-grow: 1; align-items: stretch; justify-content: flex-start; width: auto; height: auto;">
+        <!-- 场景资源选择区域 -->
+        <uie:ObjectField label="选择场景资源" type="UnityEditor.SceneAsset, UnityEditor.CoreModule" tooltip="场景" style="height: 20px; align-items: auto; margin-bottom: 4px;" name="SceneAssetField" />
+        
+        <!-- 无场景时的提示 -->
+        <ui:VisualElement name="NoSceneHint" style="flex-grow: 1; flex-direction: row; align-items: center; justify-content: center; height: 40px; background-color: #FFF8E1; border-radius: 4px; border: 2px solid #FFB300; margin: 2px 0;">
+            <ui:Label tabindex="-1" text="请选择一个场景资源" parse-escape-sequences="true" display-tooltip-when-elided="true" style="color: #FF6D00; font-size: 14px; font-weight: bold;" />
+        </ui:VisualElement>
+        
+        <!-- 场景详细信息 -->
+        <ui:VisualElement name="SceneDetails" style="display: none; background-color: #E8F5E9; border-radius: 4px; padding: 10px; margin: 2px 0; border: 1px solid #C8E6C9;">
+            <ui:Label text="场景信息" style="font-weight: bold; margin-bottom: 6px; font-size: 13px; color: #2E7D32;" />
+            <ui:VisualElement name="SceneName" style="flex-grow: 1; flex-direction: row; align-items: center; height: 22px; margin: 4px 0;">
+                <ui:Label tabindex="-1" text="名称：" parse-escape-sequences="true" display-tooltip-when-elided="true" style="width: 50px; font-size: 13px; color: #2E7D32; font-weight: 500;" />
+                <ui:Label tabindex="-1" text="" parse-escape-sequences="true" display-tooltip-when-elided="true" name="Value" style="font-size: 13px; flex-grow: 1; unity-text-overflow-position: Ellipsis; color: #1B5E20; font-weight: bold;" />
+            </ui:VisualElement>
+            <ui:VisualElement name="ScenePath" style="flex-grow: 1; flex-direction: row; align-items: center; height: 22px; margin: 4px 0;">
+                <ui:Label tabindex="-1" text="路径：" parse-escape-sequences="true" display-tooltip-when-elided="true" style="width: 50px; font-size: 13px; color: #2E7D32; font-weight: 500;" />
+                <ui:Label tabindex="-1" text="" parse-escape-sequences="true" display-tooltip-when-elided="true" name="Value" style="font-size: 13px; flex-grow: 1; unity-text-overflow-position: Ellipsis; color: #424242;" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>
