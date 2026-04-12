@@ -12,6 +12,7 @@ namespace LJVToolkit.Editor.Scripts.Inspector
     public class SceneReferenceEditor : PropertyDrawer
     {
         private static VisualTreeAsset _visualTreeAsset;
+        private static readonly System.Collections.Generic.Dictionary<string, bool> FoldoutStates = new();
 
         public override VisualElement CreatePropertyGUI(SerializedProperty property)
         {
@@ -22,6 +23,9 @@ namespace LJVToolkit.Editor.Scripts.Inspector
             }
 
             var rootElement = _visualTreeAsset.CloneTree();
+            // PropertyDrawer lives inside the Inspector ScrollView; avoid growing into the scrollbar hit area.
+            rootElement.style.flexGrow = 0;
+            rootElement.style.flexShrink = 0;
 
             SerializedProperty guidProperty = property.FindPropertyRelative(SceneReference.GuidFieldName);
             SerializedProperty pathProperty = property.FindPropertyRelative(SceneReference.PathFieldName);
@@ -34,15 +38,18 @@ namespace LJVToolkit.Editor.Scripts.Inspector
 
             var objectField = rootElement.Q<ObjectField>("SceneAssetField");
             var noSceneHint = rootElement.Q<VisualElement>("NoSceneHint");
-            var sceneDetails = rootElement.Q<VisualElement>("SceneDetails");
-            var pathLabel = sceneDetails.Q<VisualElement>("ScenePath").Q<Label>("Value");
-            var nameLabel = sceneDetails.Q<VisualElement>("SceneName").Q<Label>("Value");
-            var detailsTitle = sceneDetails.Q<Label>();
+            var sceneDetailsFoldout = rootElement.Q<Foldout>("SceneDetailsFoldout");
+            var summaryLabel = rootElement.Q<Label>("SummaryValue");
+            var pathLabel = rootElement.Q<VisualElement>("ScenePath").Q<Label>("Value");
+            var nameLabel = rootElement.Q<VisualElement>("SceneName").Q<Label>("Value");
+            string propertyKey = $"{property.serializedObject.targetObject.GetInstanceID()}:{property.propertyPath}";
 
             objectField.objectType = typeof(SceneAsset);
+            sceneDetailsFoldout.value = GetFoldoutState(propertyKey);
+            sceneDetailsFoldout.RegisterValueChangedCallback(evt => FoldoutStates[propertyKey] = evt.newValue);
 
             // 初始化
-            UpdateDisplay(guidProperty, objectField, noSceneHint, sceneDetails, pathLabel, nameLabel, detailsTitle);
+            UpdateDisplay(guidProperty, objectField, noSceneHint, sceneDetailsFoldout, summaryLabel, pathLabel, nameLabel);
 
             // 值改变事件
             objectField.RegisterValueChangedCallback(evt =>
@@ -65,7 +72,7 @@ namespace LJVToolkit.Editor.Scripts.Inspector
                     nameProperty.stringValue = sceneAsset.name;
                 }
 
-                UpdateDisplay(guidProperty, objectField, noSceneHint, sceneDetails, pathLabel, nameLabel, detailsTitle);
+                UpdateDisplay(guidProperty, objectField, noSceneHint, sceneDetailsFoldout, summaryLabel, pathLabel, nameLabel);
                 property.serializedObject.ApplyModifiedProperties();
             });
 
@@ -76,10 +83,10 @@ namespace LJVToolkit.Editor.Scripts.Inspector
             SerializedProperty guidProperty,
             ObjectField objectField,
             VisualElement noSceneHint,
-            VisualElement sceneDetails,
+            Foldout sceneDetailsFoldout,
+            Label summaryLabel,
             Label pathLabel,
-            Label nameLabel,
-            Label detailsTitle)
+            Label nameLabel)
         {
             string guid = guidProperty.stringValue;
             bool hasScene = !string.IsNullOrEmpty(guid);
@@ -87,22 +94,23 @@ namespace LJVToolkit.Editor.Scripts.Inspector
             if (!hasScene)
             {
                 noSceneHint.style.display = DisplayStyle.Flex;
-                sceneDetails.style.display = DisplayStyle.None;
+                sceneDetailsFoldout.style.display = DisplayStyle.None;
                 objectField.value = null;
                 return;
             }
 
             noSceneHint.style.display = DisplayStyle.None;
-            sceneDetails.style.display = DisplayStyle.Flex;
+            sceneDetailsFoldout.style.display = DisplayStyle.Flex;
 
             string path = AssetDatabase.GUIDToAssetPath(guid);
             
             if (string.IsNullOrEmpty(path))
             {
+                sceneDetailsFoldout.text = "场景详情";
+                summaryLabel.text = "GUID 已失效";
                 nameLabel.text = "无效的场景GUID";
                 pathLabel.text = "请重新选择";
-                sceneDetails.style.backgroundColor = new StyleColor(new Color(0.95f, 0.8f, 0.8f));
-                detailsTitle.style.color = new StyleColor(Color.red);
+                sceneDetailsFoldout.style.backgroundColor = new StyleColor(new Color(0.95f, 0.8f, 0.8f));
                 objectField.value = null;
                 return;
             }
@@ -111,23 +119,28 @@ namespace LJVToolkit.Editor.Scripts.Inspector
             
             if (sceneAsset == null)
             {
+                sceneDetailsFoldout.text = "场景详情";
+                summaryLabel.text = "资源丢失";
                 nameLabel.text = "场景资源丢失";
                 pathLabel.text = path;
-                sceneDetails.style.backgroundColor = new StyleColor(new Color(1f, 0.95f, 0.8f));
-               
-                detailsTitle.style.color = new StyleColor(new Color(1f, 0.6f, 0f));
+                sceneDetailsFoldout.style.backgroundColor = new StyleColor(new Color(1f, 0.95f, 0.8f));
                 objectField.value = null;
                 return;
             }
 
             objectField.value = sceneAsset;
+            sceneDetailsFoldout.text = $"场景详情 - {sceneAsset.name}";
+            summaryLabel.text = sceneAsset.name;
             nameLabel.text = sceneAsset.name;
             pathLabel.text = path;
             
             // 重置为正常颜色
-            sceneDetails.style.backgroundColor = new StyleColor(new Color(0.91f, 0.96f, 0.91f)); // #E8F5E9
-           
-            detailsTitle.style.color = new StyleColor(new Color(0.18f, 0.49f, 0.20f));           // #2E7D32
+            sceneDetailsFoldout.style.backgroundColor = new StyleColor(new Color(0.91f, 0.96f, 0.91f)); // #E8F5E9
+        }
+
+        private static bool GetFoldoutState(string propertyKey)
+        {
+            return FoldoutStates.TryGetValue(propertyKey, out bool isExpanded) && isExpanded;
         }
     }
 }
