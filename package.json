@@ -1,12 +1,12 @@
 {
-  "name": "com.voyage.depot",
-  "version": "1.0.15",
-  "displayName": "Voyage Depot",
+  "name": "com.voyageforge.depot",
+  "version": "1.0.14",
+  "displayName": "Depot",
   "description": "A collection of Unity utility functions and extensions.",
   "unity": "2022.3",
   "author": {
     "name": "Voyage",
-    "url": "https://github.com/LJVoyage/Depot"
+    "url": "https://github.com/VoyageForge/Depot"
   },
   "license": "MIT"
 }
