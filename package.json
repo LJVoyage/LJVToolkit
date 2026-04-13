@@ -1,6 +1,6 @@
 {
   "name": "com.ljvoyage.ljvtoolkit",
-  "version": "1.0.12",
+  "version": "1.0.13",
   "displayName": "LJVoyage Toolkit",
   "description": "A collection of Unity utility functions and extensions.",
   "unity": "2022.3",
