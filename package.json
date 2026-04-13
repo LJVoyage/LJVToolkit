@@ -1,12 +1,12 @@
 {
-  "name": "com.ljvoyage.ljvtoolkit",
-  "version": "1.0.14",
-  "displayName": "LJVoyage Toolkit",
+  "name": "com.voyage.depot",
+  "version": "1.0.15",
+  "displayName": "Voyage Depot",
   "description": "A collection of Unity utility functions and extensions.",
   "unity": "2022.3",
   "author": {
-    "name": "LJVoyage",
-    "url": "https://github.com/LJVoyage"
+    "name": "Voyage",
+    "url": "https://github.com/LJVoyage/Depot"
   },
   "license": "MIT"
 }
