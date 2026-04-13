@@ -1,6 +1,6 @@
 {
   "name": "com.voyageforge.depot",
-  "version": "1.0.14",
+  "version": "0.0.1",
   "displayName": "Depot",
   "description": "A collection of Unity utility functions and extensions.",
   "unity": "2022.3",
