@@ -1,3 +1,5 @@
+## v0.0.2
+- Initial release
 ## [1.0.0] - 2025-10-21
 
 ### 🎉 首次发布 (Initial Release)
