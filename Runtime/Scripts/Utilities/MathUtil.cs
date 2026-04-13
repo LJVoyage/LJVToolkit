@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 
 
-namespace LJVoyage.LJVToolkit.Runtime.Utilities
+namespace VoyageForge.Depot.Runtime.Utilities
 {
     /// <summary>
     /// 数学工具类

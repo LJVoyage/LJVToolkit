@@ -2,29 +2,29 @@
 using UnityEditor;
 using UnityEngine.UIElements;
 
-namespace LJVToolkit.Editor.Scripts.Utilities
+namespace VoyageForge.Depot.Editor.Scripts.Utilities
 {
-    public static class LJVToolkitProjectSettingsProvider
+    public static class DepotProjectSettingsProvider
     {
-        private const string SettingsUxmlPath = "Assets/LJVToolkit/Editor/Scripts/Utilities/LJVToolkitProjectSettings.uxml";
+        private const string SettingsUxmlPath = "Assets/Depot/Editor/Scripts/Utilities/DepotProjectSettings.uxml";
         private static VisualTreeAsset _settingsVisualTreeAsset;
 
         [SettingsProvider]
         public static SettingsProvider CreateSettingsProvider()
         {
-            return new SettingsProvider("Project/LJV Toolkit", SettingsScope.Project)
+            return new SettingsProvider("Project/Depot", SettingsScope.Project)
             {
-                label = "LJV Toolkit",
+                label = "Depot",
                 activateHandler = (_, rootElement) =>
                 {
-                    var settings = LJVToolkitProjectSettings.instance;
+                    var settings = DepotProjectSettings.instance;
                     settings.EnsureSaved();
 
                     rootElement.Clear();
                     var visualTreeAsset = LoadSettingsVisualTreeAsset();
                     if (visualTreeAsset == null)
                     {
-                        rootElement.Add(new Label("LJV Toolkit Project Settings UXML not found."));
+                        rootElement.Add(new Label("Depot Project Settings UXML not found."));
                         return;
                     }
 
@@ -59,7 +59,7 @@ namespace LJVToolkit.Editor.Scripts.Utilities
                         SkipSplashEditor.ApplySetting(evt.newValue);
                     });
                 },
-                keywords = new HashSet<string>(new[] { "LJV", "Toolkit", "Auto", "Version", "Build", "Skip", "Splash" })
+                keywords = new HashSet<string>(new[] { "Depot", "Auto", "Version", "Build", "Skip", "Splash" })
             };
         }
 

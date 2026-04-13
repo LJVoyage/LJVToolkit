@@ -3,17 +3,17 @@ using UnityEditor.Build;
 using UnityEditor.Build.Reporting;
 using UnityEngine;
 
-namespace LJVToolkit.Editor.Scripts.Utilities
+namespace VoyageForge.Depot.Editor.Scripts.Utilities
 {
     public class AutoVersionPreBuild : IPreprocessBuildWithReport
     {
-        private const string ToggleMenuPath = "LJV/Toolkit/Auto Version";
+        private const string ToggleMenuPath = "VoyageForge/Depot/Auto Version";
 
         public int callbackOrder => 0;
 
         public void OnPreprocessBuild(BuildReport report)
         {
-            var settings = LJVToolkitProjectSettings.instance;
+            var settings = DepotProjectSettings.instance;
             settings.EnsureSaved();
 
             if (!settings.AutoVersionEnabled)
@@ -48,7 +48,7 @@ namespace LJVToolkit.Editor.Scripts.Utilities
         [MenuItem(ToggleMenuPath)]
         private static void ToggleAutoIncrement()
         {
-            var settings = LJVToolkitProjectSettings.instance;
+            var settings = DepotProjectSettings.instance;
             settings.EnsureSaved();
             settings.AutoVersionEnabled = !settings.AutoVersionEnabled;
             Debug.Log($"[AutoVersion] Auto increment {(settings.AutoVersionEnabled ? "enabled" : "disabled")}.");
@@ -57,7 +57,7 @@ namespace LJVToolkit.Editor.Scripts.Utilities
         [MenuItem(ToggleMenuPath, true)]
         private static bool ToggleAutoIncrementValidate()
         {
-            var settings = LJVToolkitProjectSettings.instance;
+            var settings = DepotProjectSettings.instance;
             settings.EnsureSaved();
             Menu.SetChecked(ToggleMenuPath, settings.AutoVersionEnabled);
             return true;

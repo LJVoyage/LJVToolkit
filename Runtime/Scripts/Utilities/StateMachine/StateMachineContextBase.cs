@@ -1,4 +1,4 @@
-﻿namespace LJVoyage.LJVToolkit.Runtime.Utilities
+﻿namespace VoyageForge.Depot.Runtime.Utilities
 {
     /// <summary>
     ///  状态机上下文基类

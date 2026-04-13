@@ -1,4 +1,4 @@
-﻿namespace LJVoyage.LJVToolkit.Runtime.Utilities
+﻿namespace VoyageForge.Depot.Runtime.Utilities
 {
     public interface IState<TContext>
         where TContext : class, new()

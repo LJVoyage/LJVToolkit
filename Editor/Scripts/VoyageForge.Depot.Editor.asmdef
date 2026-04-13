@@ -1,5 +1,5 @@
 {
-    "name": "LJVoyage.LJVToolkit.Editor",
+    "name": "VoyageForge.Depot.Editor",
     "rootNamespace": "",
     "references": [
         "GUID:0286d4cd81cb0c245a7c127e333f132c"

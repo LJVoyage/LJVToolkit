@@ -2,12 +2,12 @@ using System.IO;
 using UnityEditor;
 using UnityEngine;
 
-namespace LJVToolkit.Editor.Scripts.Utilities
+namespace VoyageForge.Depot.Editor.Scripts.Utilities
 {
-    [FilePath("ProjectSettings/LJVToolkitSettings.asset", FilePathAttribute.Location.ProjectFolder)]
-    public class LJVToolkitProjectSettings : ScriptableSingleton<LJVToolkitProjectSettings>
+    [FilePath("ProjectSettings/DepotSettings.asset", FilePathAttribute.Location.ProjectFolder)]
+    public class DepotProjectSettings : ScriptableSingleton<DepotProjectSettings>
     {
-        private const string SettingsAssetPath = "ProjectSettings/LJVToolkitSettings.asset";
+        private const string SettingsAssetPath = "ProjectSettings/DepotSettings.asset";
 
         [SerializeField] private bool autoVersionEnabled = true;
         [SerializeField] private int autoVersionIncrementStep = 1;

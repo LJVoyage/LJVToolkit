@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace LJVoyage.LJVToolkit.Runtime.Utilities
+namespace VoyageForge.Depot.Runtime.Utilities
 {
     /// <summary>
     /// 状态机

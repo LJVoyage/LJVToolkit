@@ -1,9 +1,9 @@
 ﻿
-using LJVoyage.LJVToolkit.Runtime.Attributes;
+using VoyageForge.Depot.Runtime.Attributes;
 using UnityEditor;
 using UnityEngine;
 
-namespace LJVoyage.LJVToolkit.Editor.Attributes
+namespace VoyageForge.Depot.Editor.Attributes
 {
     [CustomPropertyDrawer(typeof(ReadOnlyAttribute))]
     public class ReadOnlyDrawer : PropertyDrawer

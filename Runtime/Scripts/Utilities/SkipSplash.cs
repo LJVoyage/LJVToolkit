@@ -1,4 +1,4 @@
-﻿namespace LJVoyage.LJVToolkit.Runtime.Utilities
+﻿namespace VoyageForge.Depot.Runtime.Utilities
 {
 #if SKIP_SPLASH
 #if !UNITY_EDITOR

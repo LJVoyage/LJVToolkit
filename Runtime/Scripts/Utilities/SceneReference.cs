@@ -1,8 +1,8 @@
 ﻿using System;
-using LJVoyage.LJVToolkit.Runtime.Attributes;
+using VoyageForge.Depot.Runtime.Attributes;
 using UnityEngine;
 
-namespace LJVoyage.LJVToolkit.Runtime.Utilities
+namespace VoyageForge.Depot.Runtime.Utilities
 {
     [Serializable]
     public class SceneReference 

@@ -2,7 +2,7 @@ using System.IO;
 using UnityEditor;
 using UnityEngine.UIElements;
 
-namespace LJVToolkit.Editor.Scripts.Utilities
+namespace VoyageForge.Depot.Editor.Scripts.Utilities
 {
     /// <summary>
     /// 编辑器 UXML 资源加载工具。
@@ -16,7 +16,7 @@ namespace LJVToolkit.Editor.Scripts.Utilities
         ///
         /// 使用示例：
         /// var tree = UxmlAssetUtility.LoadVisualTreeAsset(
-        ///     "Assets/LJVToolkit/Editor/Scripts/Utilities/LJVToolkitProjectSettings.uxml");
+        ///     "Assets/Depot/Editor/Scripts/Utilities/DepotProjectSettings.uxml");
         /// tree.CloneTree(rootElement);
         /// </summary>
         /// <param name="defaultAssetPath">资源的默认路径。</param>

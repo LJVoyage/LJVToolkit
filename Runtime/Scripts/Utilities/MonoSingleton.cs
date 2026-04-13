@@ -1,6 +1,6 @@
 ﻿using UnityEngine;
 
-namespace LJVoyage.LJVToolkit.Runtime.Utilities
+namespace VoyageForge.Depot.Runtime.Utilities
 {
     /// <summary>
     /// 可继承的 MonoBehaviour 单例基类。

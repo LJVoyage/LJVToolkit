@@ -1,7 +1,7 @@
 ﻿using System;
 using UnityEngine;
 
-namespace LJVoyage.LJVToolkit.Runtime.Attributes
+namespace VoyageForge.Depot.Runtime.Attributes
 {
     public class ReadOnlyAttribute : PropertyAttribute
     {

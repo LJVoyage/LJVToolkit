@@ -1,10 +1,10 @@
 ﻿using UnityEditor;
 
-namespace LJVToolkit.Editor.Scripts.Utilities
+namespace VoyageForge.Depot.Editor.Scripts.Utilities
 {
     public static class SkipSplashEditor
     {
-        private const string MENU_ITEM_PATH = "LJV/Toolkit/Skip Splash";
+        private const string MENU_ITEM_PATH = "VoyageForge/Depot/Skip Splash";
         private const string SKIP_SPLASH_DEFINE = "SKIP_SPLASH";
 
         /// <summary>
@@ -13,7 +13,7 @@ namespace LJVToolkit.Editor.Scripts.Utilities
         [MenuItem(MENU_ITEM_PATH)]
         public static void SkipSplash()
         {
-            var settings = LJVToolkitProjectSettings.instance;
+            var settings = DepotProjectSettings.instance;
             settings.EnsureSaved();
             settings.SkipSplashEnabled = !settings.SkipSplashEnabled;
             ApplySetting(settings.SkipSplashEnabled);
@@ -24,7 +24,7 @@ namespace LJVToolkit.Editor.Scripts.Utilities
         {
             EditorApplication.delayCall += () =>
             {
-                var settings = LJVToolkitProjectSettings.instance;
+                var settings = DepotProjectSettings.instance;
                 settings.EnsureSaved();
                 ApplySetting(settings.SkipSplashEnabled);
             };

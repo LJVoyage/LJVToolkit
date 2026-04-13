@@ -1,19 +1,18 @@
 ﻿using System;
-using LJVoyage.LJVToolkit.Runtime.Utilities;
-using LJVToolkit.Editor.Scripts.Utilities;
+using VoyageForge.Depot.Runtime.Utilities;
 using UnityEditor;
 using UnityEditor.UIElements;
 using UnityEngine;
 using UnityEngine.UIElements;
-using Object = UnityEngine.Object;
+using VoyageForge.Depot.Editor.Scripts.Utilities;
 
-namespace LJVToolkit.Editor.Scripts.Inspector
+namespace VoyageForge.Depot.Editor.Scripts.Inspector
 {
     [CustomPropertyDrawer(typeof(SceneReference))]
     public class SceneReferenceEditor : PropertyDrawer 
     {
         private const string DefaultInspectorUxmlPath =
-            "Assets/LJVToolkit/Editor/Scripts/Inspector/SceneReference/SceneReferenceInspector.uxml";
+            "Assets/Depot/Editor/Scripts/Inspector/SceneReference/SceneReferenceInspector.uxml";
 
         private static VisualTreeAsset _visualTreeAsset;
         private static readonly System.Collections.Generic.Dictionary<string, bool> FoldoutStates = new();
