@@ -5,38 +5,62 @@ using UnityEngine;
 
 namespace LJVToolkit.Editor.Scripts.Utilities
 {
-    public class AutoVersionPreBuild: IPreprocessBuildWithReport
+    public class AutoVersionPreBuild : IPreprocessBuildWithReport
     {
+        private const string ToggleMenuPath = "LJV/Toolkit/Auto Version";
+
         public int callbackOrder => 0;
 
         public void OnPreprocessBuild(BuildReport report)
         {
-            // 1. 获取当前 bundleVersion
-            string version = PlayerSettings.bundleVersion; // e.g. "1.0.0"
+            var settings = LJVToolkitProjectSettings.instance;
+            settings.EnsureSaved();
+
+            if (!settings.AutoVersionEnabled)
+            {
+                Debug.Log("[AutoVersion] Auto increment disabled. Skipping version update.");
+                return;
+            }
+
+            string version = PlayerSettings.bundleVersion;
             Debug.Log("Current Version: " + version);
 
-            // 2. 拆分版本号
             string[] parts = version.Split('.');
             int major = int.Parse(parts[0]);
             int minor = int.Parse(parts[1]);
             int patch = int.Parse(parts[2]);
+            int incrementStep = settings.AutoVersionIncrementStep;
 
-            // 3. 自动递增 patch
-            patch++;
+            patch += incrementStep;
             string newVersion = $"{major}.{minor}.{patch}";
 
-            // 更新 PlayerSettings 版本号
             PlayerSettings.bundleVersion = newVersion;
 
-            // 4. Android versionCode 自增
             if (report.summary.platform == BuildTarget.Android)
             {
-                PlayerSettings.Android.bundleVersionCode++;
+                PlayerSettings.Android.bundleVersionCode += incrementStep;
                 Debug.Log("Android VersionCode: " + PlayerSettings.Android.bundleVersionCode);
             }
 
-            // 5. 打印新版本
-            Debug.Log($"[AutoVersion] Updated Version: {newVersion}");
+            Debug.Log($"[AutoVersion] Updated Version: {newVersion} (step: {incrementStep})");
+        }
+
+        [MenuItem(ToggleMenuPath)]
+        private static void ToggleAutoIncrement()
+        {
+            var settings = LJVToolkitProjectSettings.instance;
+            settings.EnsureSaved();
+            settings.AutoVersionEnabled = !settings.AutoVersionEnabled;
+            Debug.Log($"[AutoVersion] Auto increment {(settings.AutoVersionEnabled ? "enabled" : "disabled")}.");
+        }
+
+        [MenuItem(ToggleMenuPath, true)]
+        private static bool ToggleAutoIncrementValidate()
+        {
+            var settings = LJVToolkitProjectSettings.instance;
+            settings.EnsureSaved();
+            Menu.SetChecked(ToggleMenuPath, settings.AutoVersionEnabled);
+            return true;
         }
     }
 }

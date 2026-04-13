@@ -1,5 +1,6 @@
 ﻿using System;
 using LJVoyage.LJVToolkit.Runtime.Utilities;
+using LJVToolkit.Editor.Scripts.Utilities;
 using UnityEditor;
 using UnityEditor.UIElements;
 using UnityEngine;
@@ -9,8 +10,11 @@ using Object = UnityEngine.Object;
 namespace LJVToolkit.Editor.Scripts.Inspector
 {
     [CustomPropertyDrawer(typeof(SceneReference))]
-    public class SceneReferenceEditor : PropertyDrawer
+    public class SceneReferenceEditor : PropertyDrawer 
     {
+        private const string DefaultInspectorUxmlPath =
+            "Assets/LJVToolkit/Editor/Scripts/Inspector/SceneReference/SceneReferenceInspector.uxml";
+
         private static VisualTreeAsset _visualTreeAsset;
         private static readonly System.Collections.Generic.Dictionary<string, bool> FoldoutStates = new();
 
@@ -18,8 +22,12 @@ namespace LJVToolkit.Editor.Scripts.Inspector
         {
             if (_visualTreeAsset == null)
             {
-                _visualTreeAsset = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(
-                    "Assets/LJVToolkit/Editor/Scripts/Inspector/SceneReference/SceneReferenceInspector.uxml");
+                _visualTreeAsset = UxmlAssetUtility.LoadVisualTreeAsset(DefaultInspectorUxmlPath);
+            }
+
+            if (_visualTreeAsset == null)
+            {
+                return new Label("SceneReference inspector UXML not found");
             }
 
             var rootElement = _visualTreeAsset.CloneTree();
@@ -142,5 +150,6 @@ namespace LJVToolkit.Editor.Scripts.Inspector
         {
             return FoldoutStates.TryGetValue(propertyKey, out bool isExpanded) && isExpanded;
         }
+
     }
 }

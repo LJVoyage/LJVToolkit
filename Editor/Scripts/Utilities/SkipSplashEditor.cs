@@ -5,7 +5,6 @@ namespace LJVToolkit.Editor.Scripts.Utilities
     public static class SkipSplashEditor
     {
         private const string MENU_ITEM_PATH = "LJV/Toolkit/Skip Splash";
-
         private const string SKIP_SPLASH_DEFINE = "SKIP_SPLASH";
 
         /// <summary>
@@ -14,31 +13,36 @@ namespace LJVToolkit.Editor.Scripts.Utilities
         [MenuItem(MENU_ITEM_PATH)]
         public static void SkipSplash()
         {
-            BuildTargetGroup buildTargetGroup = EditorUserBuildSettings.selectedBuildTargetGroup;
-
-            string currentDefines = PlayerSettings.GetScriptingDefineSymbolsForGroup(buildTargetGroup);
-
-            // 添加或移除定义
-            if (currentDefines.Contains(SKIP_SPLASH_DEFINE))
-            {
-                RemoveSkipSplashDefine();
-            }
-            else
-            {
-                AddSkipSplashDefine();
-            }
-
-            // 更新菜单状态
-            UpdateMenuValidation();
+            var settings = LJVToolkitProjectSettings.instance;
+            settings.EnsureSaved();
+            settings.SkipSplashEnabled = !settings.SkipSplashEnabled;
+            ApplySetting(settings.SkipSplashEnabled);
         }
 
         [InitializeOnLoadMethod]
         private static void InitializeMenu()
         {
-            // 在编辑器加载时初始化菜单状态
-            EditorApplication.delayCall += UpdateMenuValidation;
+            EditorApplication.delayCall += () =>
+            {
+                var settings = LJVToolkitProjectSettings.instance;
+                settings.EnsureSaved();
+                ApplySetting(settings.SkipSplashEnabled);
+            };
         }
 
+        public static void ApplySetting(bool skipSplashEnabled)
+        {
+            if (skipSplashEnabled)
+            {
+                AddSkipSplashDefine();
+            }
+            else
+            {
+                RemoveSkipSplashDefine();
+            }
+
+            UpdateMenuValidation(skipSplashEnabled);
+        }
 
         private static void AddSkipSplashDefine()
         {
@@ -67,13 +71,17 @@ namespace LJVToolkit.Editor.Scripts.Utilities
         }
 
 
-        private static void UpdateMenuValidation()
+        private static void UpdateMenuValidation(bool? isEnabled = null)
+        {
+            bool checkedState = isEnabled ?? HasSkipSplashDefine();
+            Menu.SetChecked(MENU_ITEM_PATH, checkedState);
+        }
+
+        private static bool HasSkipSplashDefine()
         {
             BuildTargetGroup buildTargetGroup = EditorUserBuildSettings.selectedBuildTargetGroup;
-
             string currentDefines = PlayerSettings.GetScriptingDefineSymbolsForGroup(buildTargetGroup);
-
-            Menu.SetChecked(MENU_ITEM_PATH, currentDefines.Contains(SKIP_SPLASH_DEFINE));
+            return currentDefines.Contains(SKIP_SPLASH_DEFINE);
         }
     }
 }

@@ -1,0 +1,12 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" xsi="http://www.w3.org/2001/XMLSchema-instance" engine="UnityEngine.UIElements" editor="UnityEditor.UIElements" noNamespaceSchemaLocation="../../../../../UIElementsSchema/UIElements.xsd" editor-extension-mode="True">
+    <ui:VisualElement name="Root" style="padding-left: 10px; padding-right: 10px; padding-top: 8px; padding-bottom: 8px;">
+        <ui:Toggle name="AutoVersionToggle" label="启用自动递增" value="true" />
+        <ui:HelpBox name="AutoVersionHelp" message-type="Info" text="启用后，每次构建前会自动递增 bundleVersion。" />
+        <ui:VisualElement style="height: 6px;" />
+        <uie:IntegerField name="AutoVersionIncrementField" label="每次递增" value="1" />
+        <ui:HelpBox name="AutoVersionIncrementHelp" message-type="None" text="用于控制每次构建时 patch 版本号和 Android bundleVersionCode 增加多少，最小值为 1。" />
+        <ui:VisualElement style="height: 10px;" />
+        <ui:Toggle name="SkipSplashToggle" label="跳过启动画面" value="false" />
+        <ui:HelpBox name="SkipSplashHelp" message-type="Info" text="启用后，会为当前构建目标组添加 SKIP_SPLASH 脚本宏定义，用于跳过启动画面。" />
+    </ui:VisualElement>
+</ui:UXML>
