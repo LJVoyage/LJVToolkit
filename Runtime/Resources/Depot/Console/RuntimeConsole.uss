@@ -318,6 +318,7 @@
     background-color: rgba(0, 0, 0, 0);
     color: rgb(232, 235, 241);
     font-size: 15px;
+    --unity-cursor-color: rgb(255, 255, 255);
 }
 
 /* ===== 命令扫描 loading ===== */
