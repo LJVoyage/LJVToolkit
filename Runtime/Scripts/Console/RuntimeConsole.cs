@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using UnityEngine;
 using UnityEngine.UIElements;
 using VoyageForge.Depot.Runtime.Utilities;
@@ -58,6 +59,15 @@ namespace VoyageForge.Depot.Runtime.Console
         private VisualElement _header;          // 标题栏，用于拖拽
         private ScrollView _list;               // 日志列表
         private TextField _commandInput;        // 命令输入框
+        private VisualElement _commandBar;      // 命令输入栏（用于在其上方插入补全建议）
+        private VisualElement _loadingOverlay;  // 命令扫描期间的 loading 覆盖层
+        private VisualElement _loadingSpinner;  // loading 覆盖层中的转圈元素（运行时旋转）
+        private float _loadingAngle;            // 转圈元素当前旋转角度（度）
+        private VisualElement _suggestionsContainer; // 命令补全建议容器
+        private List<Label> _suggestionItems;        // 当前补全建议项列表（用于键盘导航高亮）
+        private int _selectedSuggestionIndex = -1;   // 当前选中的建议项索引（-1 表示未选中）
+        private float _lastTabPressTime = float.NegativeInfinity; // 上次 Tab 按下时间（用于双击全选）
+        private const float TabDoubleTapWindow = 0.3f;  // 双击 Tab 的判定时间窗口（秒）
 
         // ---------------------------------------------------------------
         // 日志与过滤状态
@@ -90,11 +100,14 @@ namespace VoyageForge.Depot.Runtime.Console
         private float _lastWakeTapTime = float.NegativeInfinity;    // 上一次按键时间（初始为负无穷，确保第一次一定重置）
 
         // ---------------------------------------------------------------
-        // 命令注册表（静态，所有实例共享）
+        // 命令扫描状态（后台线程扫描 + 主线程合并）
         // ---------------------------------------------------------------
 
-        private static readonly Dictionary<string, Action<string[]>> Commands =
-            new Dictionary<string, Action<string[]>>(StringComparer.OrdinalIgnoreCase);
+        private readonly object _commandScanLock = new object();   // 后台线程与主线程同步扫描结果的锁
+        private bool _commandScanStarted;                          // 是否已启动过扫描（防止重复启动）
+        private bool _commandScanCompleted;                        // 后台扫描是否已完成（等待主线程合并）
+        private List<ConsoleCommand> _commandScanResult;           // 后台扫描得到的命令列表（暂存）
+        private string _commandScanError;                          // 后台扫描失败时的错误信息
 
         /// <summary>控制台当前是否可见（静态，无实例时返回 false）。</summary>
         public static bool IsVisible => HasInstance && Instance.IsShown;
@@ -127,17 +140,18 @@ namespace VoyageForge.Depot.Runtime.Console
 
         /// <summary>
         /// MonoSingleton 初始化回调（在 Awake 完成实例注册后自动调用）。
-        /// 负责构建面板、注册内置命令，然后派发 <see cref="OnConsoleInitialized"/>。
+        /// 负责构建面板、启动后台线程扫描命令，然后派发 <see cref="OnConsoleInitialized"/>。
+        /// 命令扫描异步完成，扫描期间命令输入被禁用并显示 loading。
         /// 派生类若重写，务必先调用 base.OnInitialize()。
         /// </summary>
         protected override void OnInitialize()
         {
             BuildPanel();             // 加载 UXML/USS/PanelSettings 并装配 UI
-            RegisterBuiltInCommands(); // 注册 clear / help / log 内置命令
-            OnConsoleInitialized();    // 通知派生类：初始化完成
+            StartCommandScan();       // 启动后台线程扫描并注册命令（异步）
+            OnConsoleInitialized();   // 通知派生类：面板已就绪、扫描已启动
         }
 
-        /// <summary>面板构建完成、内置命令注册后调用。派生类可重写以追加初始化逻辑。</summary>
+        /// <summary>面板构建完成、命令后台扫描已启动后调用。派生类可重写以追加初始化逻辑。</summary>
         protected virtual void OnConsoleInitialized() { }
 
         /// <summary>控制台显隐状态发生变化时调用。派生类可重写。</summary>
@@ -160,10 +174,12 @@ namespace VoyageForge.Depot.Runtime.Console
             Application.logMessageReceived -= HandleLog;
         }
 
-        /// <summary>每帧检测唤醒按键。</summary>
+        /// <summary>每帧检测唤醒按键、合并命令扫描结果并驱动 loading 转圈动画。</summary>
         private void Update()
         {
             HandleWakeInput();
+            PollCommandScan();
+            UpdateLoadingSpinner();
         }
 
         // ---------------------------------------------------------------
@@ -178,6 +194,12 @@ namespace VoyageForge.Depot.Runtime.Console
         /// </summary>
         private void HandleWakeInput()
         {
+            // 命令输入框聚焦时，Tab 优先用于输入框交互（补全/全选），不作为唤醒键
+            if (IsCommandInputFocused())
+            {
+                return;
+            }
+
             // 仅当唤醒键在“本帧刚按下”时才处理
             if (!Input.GetKeyDown(_wakeKey))
             {
@@ -202,6 +224,14 @@ namespace VoyageForge.Depot.Runtime.Console
                 _lastWakeTapTime = float.NegativeInfinity;
                 Toggle();
             }
+        }
+
+        /// <summary>判断命令输入框当前是否持有焦点。</summary>
+        private bool IsCommandInputFocused()
+        {
+            return _commandInput != null &&
+                   _commandInput.focusController != null &&
+                   _commandInput.focusController.focusedElement == _commandInput;
         }
 
         // ---------------------------------------------------------------
@@ -270,6 +300,13 @@ namespace VoyageForge.Depot.Runtime.Console
             _header = _panel.Q<VisualElement>("console-header");
             _list = _panel.Q<ScrollView>("console-list");
             _commandInput = _panel.Q<TextField>("console-command-input");
+            _commandBar = _panel.Q<VisualElement>("console-command-bar");
+
+            // 创建命令扫描 loading 覆盖层（初始隐藏）
+            BuildLoadingOverlay();
+
+            // 创建命令补全建议容器（初始隐藏，插在命令输入栏上方）
+            BuildSuggestions();
 
             // 绑定过滤标签
             BindFilterButton(_panel, "filter-all", ConsoleFilter.All);
@@ -278,7 +315,7 @@ namespace VoyageForge.Depot.Runtime.Console
             BindFilterButton(_panel, "filter-error", ConsoleFilter.Error);
 
             // 绑定标题栏按钮（仅保留关闭按钮）
-            _panel.Q<Button>("console-close-button")?.RegisterCallback<ClickEvent>(_ => Hide());
+            _panel.Q<Button>("console-close-button")?.RegisterCallback<ClickEvent>(_ => ExecuteExitCommand());
 
             // 绑定命令输入框：启用时监听回车，禁用时直接隐藏
             if (_commandInput != null)
@@ -288,7 +325,10 @@ namespace VoyageForge.Depot.Runtime.Console
                     // 禁用聚焦/点击输入框时的“全选”行为，避免点击日志后再输入时把已有内容覆盖掉
                     _commandInput.selectAllOnFocus = false;
                     _commandInput.selectAllOnMouseUp = false;
-                    _commandInput.RegisterCallback<KeyDownEvent>(OnCommandKeyDown);
+                    // 用 TrickleDown 阶段拦截按键，确保在 UI Toolkit 的 Tab 焦点导航之前处理
+                    _commandInput.RegisterCallback<KeyDownEvent>(OnCommandKeyDown, TrickleDown.TrickleDown);
+                    // 输入内容变化时刷新命令补全建议
+                    _commandInput.RegisterValueChangedCallback(evt => UpdateSuggestions(evt.newValue));
                 }
                 else
                 {
@@ -558,6 +598,19 @@ namespace VoyageForge.Depot.Runtime.Console
             SetVisible(false);
         }
 
+        /// <summary>执行“退出”命令关闭控制台；若命令尚未注册（扫描未完成）则直接隐藏。</summary>
+        private void ExecuteExitCommand()
+        {
+            if (ConsoleCommandRegistry.TryGetCommand("exit", out ConsoleCommand command))
+            {
+                command.Execute(Array.Empty<string>());
+            }
+            else
+            {
+                Hide();
+            }
+        }
+
         /// <summary>切换控制台显隐。</summary>
         public void Toggle()
         {
@@ -576,10 +629,11 @@ namespace VoyageForge.Depot.Runtime.Console
             bool wasShown = IsShown;
             _consoleRoot.style.display = visible ? DisplayStyle.Flex : DisplayStyle.None;
 
-            // 显示时刷新列表，保证日志是最新的
+            // 显示时刷新列表，并让命令输入框自动获得焦点
             if (visible)
             {
                 RebuildList();
+                FocusCommandInput();
             }
 
             // 状态确实发生变化时通知派生类
@@ -587,6 +641,34 @@ namespace VoyageForge.Depot.Runtime.Console
             {
                 OnVisibilityChanged(visible);
             }
+        }
+
+        /// <summary>延迟一帧让命令输入框获得焦点，并把光标移到文本末尾（供显示面板与补全后调用）。</summary>
+        private void FocusCommandInput()
+        {
+            if (_commandInput == null || !_enableCommandInput)
+            {
+                return;
+            }
+
+            // 延迟一帧：面板刚显示或建议刚清空时，立即 Focus 可能因布局/焦点状态未稳定而失效
+            _commandInput.schedule.Execute(() =>
+            {
+                if (_commandInput == null || !_commandInput.enabledSelf)
+                {
+                    return;
+                }
+
+                // 先失焦再聚焦，强制走一遍完整的焦点切换，重新初始化文本输入状态，
+                // 修复 uGUI EventSystem 回车干扰后“焦点在但无法输入”的问题
+                _commandInput.Blur();
+                _commandInput.Focus();
+
+                // 光标与选择起点都移到文本末尾，避免聚焦后光标停在开头
+                int length = _commandInput.value.Length;
+                _commandInput.cursorIndex = length;
+                _commandInput.selectIndex = length;
+            });
         }
 
         /// <summary>静态：显示当前单例。</summary>
@@ -804,62 +886,363 @@ namespace VoyageForge.Depot.Runtime.Console
         }
 
         // ---------------------------------------------------------------
-        // 命令
+        // 命令扫描（后台线程）与补全 UI
         // ---------------------------------------------------------------
 
-        /// <summary>注册一个自定义命令（命令输入框回车后执行）。</summary>
-        /// <param name="name">命令名（不区分大小写）。</param>
-        /// <param name="handler">命令处理函数，参数为空格分隔的参数数组。</param>
-        public static void RegisterCommand(string name, Action<string[]> handler)
+        /// <summary>
+        /// 启动后台线程扫描命令，避免阻塞主线程。
+        /// 扫描期间禁用命令输入并显示 loading；扫描完成后由 <see cref="PollCommandScan"/> 在主线程合并结果。
+        /// </summary>
+        private void StartCommandScan()
         {
-            if (string.IsNullOrWhiteSpace(name) || handler == null)
+            if (_commandScanStarted)
             {
                 return;
             }
 
-            Commands[name.Trim()] = handler;
-        }
+            _commandScanStarted = true;
+            SetCommandScanning(true);
 
-        /// <summary>注销一个已注册的命令。</summary>
-        /// <param name="name">命令名。</param>
-        /// <returns>是否成功移除。</returns>
-        public static bool UnregisterCommand(string name)
-        {
-            return Commands.Remove(name);
-        }
-
-        /// <summary>注册内置命令：clear / help / log。</summary>
-        private static void RegisterBuiltInCommands()
-        {
-            // 清空日志
-            RegisterCommand("clear", _ => Instance?.Clear());
-
-            // 列出所有可用命令
-            RegisterCommand("help", _ =>
+            // 使用后台线程执行纯反射扫描，不触碰任何 Unity 主线程 API
+            Thread worker = new Thread(ScanCommandsWorker)
             {
-                Debug.Log($"[Console] 可用命令：{string.Join(", ", Commands.Keys)}");
-            });
-
-            // 打印一段文本（把参数拼回成一句话）
-            RegisterCommand("log", args =>
-            {
-                Debug.Log($"[Console] {string.Join(" ", args)}");
-            });
+                IsBackground = true,
+                Name = "DepotConsoleCommandScan"
+            };
+            worker.Start();
         }
 
-        /// <summary>命令输入框按键处理：回车时解析并执行命令。</summary>
+        /// <summary>后台线程入口：反射扫描所有程序集，把结果与错误写回共享字段。</summary>
+        private void ScanCommandsWorker()
+        {
+            List<ConsoleCommand> found = null;
+            string error = null;
+
+            try
+            {
+                found = ConsoleCommandRegistry.DiscoverCommands(ConsoleCommandRegistry.GetScanAssemblies());
+            }
+            catch (Exception ex)
+            {
+                error = ex.Message;
+            }
+
+            // 结果写回共享字段，主线程通过 PollCommandScan 读取
+            lock (_commandScanLock)
+            {
+                _commandScanResult = found;
+                _commandScanError = error;
+                _commandScanCompleted = true;
+            }
+        }
+
+        /// <summary>每帧轮询：后台扫描完成后，在主线程把命令合并进注册表并恢复 UI。</summary>
+        private void PollCommandScan()
+        {
+            List<ConsoleCommand> found;
+            string error;
+
+            lock (_commandScanLock)
+            {
+                if (!_commandScanCompleted)
+                {
+                    return;
+                }
+
+                found = _commandScanResult;
+                error = _commandScanError;
+                _commandScanCompleted = false;   // 重置，防止重复处理
+            }
+
+            if (error != null)
+            {
+                Debug.LogError($"[RuntimeConsole] 命令扫描失败：{error}");
+            }
+            else if (found != null)
+            {
+                int registered = ConsoleCommandRegistry.RegisterAll(found);
+                Debug.Log($"[RuntimeConsole] 命令扫描完成，共注册 {registered} 个命令。");
+            }
+
+            SetCommandScanning(false);
+        }
+
+        /// <summary>设置“命令扫描中”状态：切换输入可用性与 loading 覆盖层。</summary>
+        /// <param name="scanning">是否正在扫描。</param>
+        private void SetCommandScanning(bool scanning)
+        {
+            // 扫描期间禁用命令输入，避免执行尚未注册的命令
+            if (_commandInput != null)
+            {
+                _commandInput.SetEnabled(!scanning);
+            }
+
+            if (_loadingOverlay != null)
+            {
+                _loadingOverlay.style.display = scanning ? DisplayStyle.Flex : DisplayStyle.None;
+            }
+        }
+
+        /// <summary>每帧驱动 loading 转圈动画（仅扫描期间可见）。</summary>
+        private void UpdateLoadingSpinner()
+        {
+            if (_loadingSpinner == null ||
+                _loadingOverlay == null ||
+                _loadingOverlay.style.display == DisplayStyle.None)
+            {
+                return;
+            }
+
+            // 匀速旋转，使用 unscaledDeltaTime 保证暂停（timeScale=0）时动画继续
+            _loadingAngle = (_loadingAngle + 180f * Time.unscaledDeltaTime) % 360f;
+            _loadingSpinner.style.rotate = new Rotate(new Angle(_loadingAngle, AngleUnit.Degree));
+        }
+
+        /// <summary>创建命令扫描期间的 loading 覆盖层（居中转圈 + 文字，初始隐藏）。</summary>
+        private void BuildLoadingOverlay()
+        {
+            if (_consoleRoot == null)
+            {
+                return;
+            }
+
+            _loadingOverlay = new VisualElement();
+            _loadingOverlay.AddToClassList("console-loading-overlay");
+
+            _loadingSpinner = new VisualElement();
+            _loadingSpinner.AddToClassList("console-loading-spinner");
+            _loadingOverlay.Add(_loadingSpinner);
+
+            Label text = new Label("正在扫描命令…");
+            text.AddToClassList("console-loading-text");
+            _loadingOverlay.Add(text);
+
+            // 默认隐藏，扫描开始时由 SetCommandScanning 显示
+            _loadingOverlay.style.display = DisplayStyle.None;
+            _consoleRoot.Add(_loadingOverlay);
+        }
+
+        /// <summary>创建命令补全建议容器（初始隐藏，插在命令输入栏上方）。</summary>
+        private void BuildSuggestions()
+        {
+            if (_commandBar == null || _commandBar.parent == null)
+            {
+                return;
+            }
+
+            _suggestionsContainer = new VisualElement();
+            _suggestionsContainer.AddToClassList("console-suggestions");
+            _suggestionsContainer.style.display = DisplayStyle.None;
+
+            // 插入到命令输入栏之前，使建议列表浮在输入框上方
+            _commandBar.parent.Insert(_commandBar.parent.IndexOf(_commandBar), _suggestionsContainer);
+        }
+
+        /// <summary>根据输入内容刷新命令补全建议列表。</summary>
+        /// <param name="text">输入框当前内容。</param>
+        private void UpdateSuggestions(string text)
+        {
+            if (_suggestionsContainer == null)
+            {
+                return;
+            }
+
+            // 仅当仍在输入命令名（不含空格）时补全；进入参数阶段后隐藏
+            if (string.IsNullOrEmpty(text) || text.Contains(' '))
+            {
+                HideSuggestions();
+                return;
+            }
+
+            IReadOnlyList<string> completions = ConsoleCommandRegistry.GetCompletions(text);
+
+            // 无匹配，或唯一匹配且已完整输入，则隐藏
+            bool uniqueAndComplete = completions.Count == 1 &&
+                                     completions[0].Equals(text, StringComparison.OrdinalIgnoreCase);
+            if (completions.Count == 0 || uniqueAndComplete)
+            {
+                HideSuggestions();
+                return;
+            }
+
+            _suggestionsContainer.Clear();
+            _suggestionItems = new List<Label>();
+            _selectedSuggestionIndex = 0;   // 默认选中第一项
+
+            foreach (string name in completions)
+            {
+                Label item = new Label(name);
+                item.AddToClassList("console-suggestion-item");
+
+                // 点击建议项：填充命令名并追加空格，随后隐藏建议
+                item.RegisterCallback<ClickEvent>(_ => AcceptSuggestionByName(name));
+
+                _suggestionsContainer.Add(item);
+                _suggestionItems.Add(item);
+            }
+
+            UpdateSuggestionHighlight();
+            _suggestionsContainer.style.display = DisplayStyle.Flex;
+        }
+
+        /// <summary>补全建议当前是否可见。</summary>
+        private bool IsSuggestionsVisible()
+        {
+            return _suggestionsContainer != null &&
+                   _suggestionsContainer.style.display == DisplayStyle.Flex;
+        }
+
+        /// <summary>按方向移动补全建议的选中项（delta 为 +1 下移、-1 上移）。</summary>
+        /// <param name="delta">移动步长。</param>
+        private void NavigateSuggestion(int delta)
+        {
+            if (_suggestionItems == null || _suggestionItems.Count == 0)
+            {
+                return;
+            }
+
+            // 循环移动，保证上下键可在列表首尾之间来回
+            _selectedSuggestionIndex =
+                (_selectedSuggestionIndex + delta + _suggestionItems.Count) % _suggestionItems.Count;
+            UpdateSuggestionHighlight();
+        }
+
+        /// <summary>刷新补全建议项的选中高亮。</summary>
+        private void UpdateSuggestionHighlight()
+        {
+            for (int i = 0; i < _suggestionItems.Count; i++)
+            {
+                _suggestionItems[i].EnableInClassList("console-suggestion-item-selected", i == _selectedSuggestionIndex);
+            }
+        }
+
+        /// <summary>把当前选中的建议项填入输入框（补全命令名）。</summary>
+        private void AcceptSuggestion()
+        {
+            if (_suggestionItems == null || _suggestionItems.Count == 0)
+            {
+                return;
+            }
+
+            // 索引越界时回退到第一项
+            if (_selectedSuggestionIndex < 0 || _selectedSuggestionIndex >= _suggestionItems.Count)
+            {
+                _selectedSuggestionIndex = 0;
+            }
+
+            AcceptSuggestionByName(_suggestionItems[_selectedSuggestionIndex].text);
+        }
+
+        /// <summary>把指定命令名填入输入框并隐藏建议（供点击与 Tab 共用）。</summary>
+        /// <param name="name">要填入的命令名。</param>
+        private void AcceptSuggestionByName(string name)
+        {
+            // 用 SetValueWithoutNotify 设置值，避免触发 value changed 回调重建建议列表
+            _commandInput.SetValueWithoutNotify(name + " ");
+
+            // 立即把光标与选择起点移到文本末尾，避免光标停在补全前的位置
+            int length = _commandInput.value.Length;
+            _commandInput.cursorIndex = length;
+            _commandInput.selectIndex = length;
+
+            HideSuggestions();
+
+            // 焦点仍在输入框时无需重新聚焦（否则会触发多余的 Blur/Focus 往返破坏输入）；
+            // 仅在焦点丢失（例如点击建议项导致失焦）时才延迟聚焦
+            if (!IsCommandInputFocused())
+            {
+                FocusCommandInput();
+            }
+        }
+
+        /// <summary>隐藏补全建议并清理选中状态。</summary>
+        private void HideSuggestions()
+        {
+            if (_suggestionsContainer != null)
+            {
+                _suggestionsContainer.Clear();
+                _suggestionsContainer.style.display = DisplayStyle.None;
+            }
+
+            _suggestionItems = null;
+            _selectedSuggestionIndex = -1;
+        }
+
+        /// <summary>命令输入框按键处理：回车执行、Tab 补全/全选、上下方向键选择建议。</summary>
         private void OnCommandKeyDown(KeyDownEvent evt)
         {
-            // 仅响应主回车与小键盘回车
-            if (_commandInput == null ||
-                (evt.keyCode != KeyCode.Return && evt.keyCode != KeyCode.KeypadEnter))
+            if (_commandInput == null)
             {
                 return;
             }
 
+            // 上下方向键：在有补全建议时移动选中项
+            if (evt.keyCode == KeyCode.UpArrow || evt.keyCode == KeyCode.DownArrow)
+            {
+                if (IsSuggestionsVisible())
+                {
+                    NavigateSuggestion(evt.keyCode == KeyCode.DownArrow ? 1 : -1);
+                    evt.StopPropagation();
+                    evt.PreventDefault();
+                }
+                return;
+            }
+
+            // Tab：有建议时填入选中项，无建议时双击全选
+            if (evt.keyCode == KeyCode.Tab)
+            {
+                HandleTabKey(evt);
+                return;
+            }
+
+            // 回车：执行命令，并阻止 TextField 默认回车行为（避免触发焦点切换干扰输入）
+            if (evt.keyCode == KeyCode.Return || evt.keyCode == KeyCode.KeypadEnter)
+            {
+                ExecuteCommand();
+                evt.StopPropagation();
+                evt.PreventDefault();
+            }
+        }
+
+        /// <summary>处理 Tab 键：有补全建议时填入选中项，否则检测双击全选。</summary>
+        /// <param name="evt">按键事件。</param>
+        private void HandleTabKey(KeyDownEvent evt)
+        {
+            // 有补全建议：把当前选中项填入输入框
+            if (IsSuggestionsVisible())
+            {
+                AcceptSuggestion();
+                evt.StopPropagation();
+                evt.PreventDefault();
+                return;
+            }
+
+            // 无建议：检测“双击 Tab”全选
+            float now = Time.unscaledTime;
+            if (now - _lastTabPressTime <= TabDoubleTapWindow)
+            {
+                // 双击：全选输入框内容，并重置计时避免三连触发
+                _commandInput.SelectAll();
+                _lastTabPressTime = float.NegativeInfinity;
+            }
+            else
+            {
+                _lastTabPressTime = now;
+            }
+
+            evt.StopPropagation();
+            evt.PreventDefault();
+        }
+
+        /// <summary>取出输入框内容并解析执行命令。</summary>
+        private void ExecuteCommand()
+        {
             // 取出输入内容并清空输入框
             string raw = _commandInput.value;
             _commandInput.value = string.Empty;
+
+            // 回车后延迟一帧重新聚焦，抵消 uGUI EventSystem 对回车键的焦点干扰
+            FocusCommandInput();
 
             if (string.IsNullOrWhiteSpace(raw))
             {
@@ -878,11 +1261,11 @@ namespace VoyageForge.Depot.Runtime.Console
             Array.Copy(parts, 1, args, 0, args.Length);
 
             // 查找并执行命令；异常与未知命令都给出提示
-            if (Commands.TryGetValue(command, out Action<string[]> handler))
+            if (ConsoleCommandRegistry.TryGetCommand(command, out ConsoleCommand commandInstance))
             {
                 try
                 {
-                    handler(args);
+                    commandInstance.Execute(args);
                 }
                 catch (Exception ex)
                 {

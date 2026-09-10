@@ -73,10 +73,46 @@ RuntimeConsole.ToggleInstance();
 
 // 清空日志
 RuntimeConsole.Instance.Clear();
-
-// 注册自定义命令（命令输入框回车执行）
-RuntimeConsole.RegisterCommand("hello", args => Debug.Log("Hello " + string.Join(" ", args)));
 ```
+
+自定义命令只需继承 `ConsoleCommand` 并标注 `[Preserve]`（防止 IL2CPP 代码剥离），无需手动注册，会被自动发现：
+
+```csharp
+using UnityEngine;
+using UnityEngine.Scripting;
+using VoyageForge.Depot.Runtime.Console;
+
+[Preserve]
+public sealed class HelloCommand : ConsoleCommand
+{
+    public override string Name => "hello";
+    public override string Usage => "hello <name>";
+    public override string Description => "打印一句问候";
+
+    public override void Execute(string[] args)
+    {
+        Debug.Log("Hello " + string.Join(" ", args));
+    }
+}
+```
+
+### 内置命令
+
+| 命令 | 用法 | 说明 |
+| --- | --- | --- |
+| `help` | `help` | 列出所有已注册命令及其用法、描述。 |
+| `clear` | `clear` | 清空日志缓冲与计数。 |
+| `log` | `log <message>` | 打印一段文本（参数拼回一句话）。 |
+| `exit` | `exit` | 退出 / 隐藏控制台（等价于点击关闭按钮）。 |
+
+`ConsoleCommand` 基类成员：
+
+| 成员 | 说明 |
+| --- | --- |
+| `Name` | 抽象属性，命令名（不区分大小写，全局唯一）。 |
+| `Usage` | 用法字符串，用于 `help` 展示；默认等于 `Name`。 |
+| `Description` | 简短描述，用于 `help` 展示；默认空字符串。 |
+| `Execute(string[] args)` | 抽象方法，命令执行体；`args` 为空格分隔的参数数组。 |
 
 ### 生命周期
 
@@ -84,11 +120,26 @@ RuntimeConsole.RegisterCommand("hello", args => Debug.Log("Hello " + string.Join
 
 | 钩子 | 说明 |
 | --- | --- |
-| `OnInitialize()` | MonoSingleton 初始化回调（Awake 阶段调用），完成面板构建与命令注册；派生类重写时需调用 `base.OnInitialize()`。 |
-| `OnConsoleInitialized()` | 面板构建完成、内置命令注册后调用。 |
+| `OnInitialize()` | MonoSingleton 初始化回调（Awake 阶段调用），完成面板构建并启动命令后台扫描；派生类重写时需调用 `base.OnInitialize()`。 |
+| `OnConsoleInitialized()` | 面板构建完成、命令后台扫描已启动后调用。 |
 | `OnVisibilityChanged(bool)` | 显隐状态变化时调用。 |
 | `OnLogReceived(ConsoleLogEntry)` | 每条日志写入缓冲后调用。 |
 | `OnAwake()` / `OnApplicationQuitting()` / `OnDestroying()` | 继承自 MonoSingleton，可按需重写。 |
+
+### 交互说明
+
+| 操作 | 行为 |
+| --- | --- |
+| 连按 3 次 `Tab` | 唤醒 / 切换控制台显隐。 |
+| 打开控制台 | 命令输入框自动获得焦点，可直接输入。 |
+| 输入命令名 | 自动弹出前缀匹配的补全建议。 |
+| 上下方向键 | 在补全建议间移动选中项。 |
+| `Tab`（有补全建议） | 把选中项填入输入框。 |
+| 双击 `Tab`（无补全建议） | 全选输入框内容。 |
+| 回车 | 执行命令，执行后自动恢复焦点、光标回到开头。 |
+| 关闭按钮（×） | 退出控制台（走 `exit` 命令）。 |
+
+> 命令扫描在后台线程进行，扫描期间输入框禁用并显示 loading，不阻塞主线程；命令输入框聚焦时 `Tab` 不再作为唤醒键，优先用于补全 / 全选。
 
 ### 面板能力
 
@@ -101,13 +152,21 @@ RuntimeConsole.RegisterCommand("hello", args => Debug.Log("Hello " + string.Join
 | 拖拽 | 拖动顶部标题栏移动面板。 |
 | 折叠 | 点击标题栏 `-` 按钮折叠/展开面板。 |
 | 清空 | 点击 `Clear` 按钮或执行 `clear` 命令。 |
-| 命令输入 | 底部输入框回车执行命令，内置 `help`、`clear`、`log`。 |
+| 命令输入 | 底部输入框回车执行命令，内置 `help`、`clear`、`log`、`exit`（退出）。 |
+| 命令补全 | 输入命令名时弹出前缀匹配建议，上下方向键选择、`Tab` 或点击补全；无建议时双击 `Tab` 全选输入。 |
+| 后台扫描 | 命令在后台线程反射发现，不阻塞主线程；扫描期间禁用输入并显示 loading。 |
 
 ### 目录
 
 | 路径 | 说明 |
 | --- | --- |
 | `Runtime/Scripts/Console/ConsoleLogEntry.cs` | 日志条目模型与过滤类型。 |
+| `Runtime/Scripts/Console/ConsoleCommand.cs` | 命令抽象基类（派生类标注 [Preserve] 后自动注册）。 |
+| `Runtime/Scripts/Console/ConsoleCommandRegistry.cs` | 命令注册表（反射发现、注册、查询与补全建议）。 |
+| `Runtime/Scripts/Console/Commands/ClearCommand.cs` | 内置 `clear` 命令。 |
+| `Runtime/Scripts/Console/Commands/HelpCommand.cs` | 内置 `help` 命令。 |
+| `Runtime/Scripts/Console/Commands/LogCommand.cs` | 内置 `log` 命令。 |
+| `Runtime/Scripts/Console/Commands/ExitCommand.cs` | 内置 `exit` 命令（退出控制台）。 |
 | `Runtime/Scripts/Console/RuntimeConsole.cs` | 运行时控制台组件。 |
 | `Runtime/Resources/Depot/Console/RuntimeConsole.uxml` | 控制台布局。 |
 | `Runtime/Resources/Depot/Console/RuntimeConsole.uss` | 控制台样式。 |

@@ -2,6 +2,7 @@
 
 /* 面板根：占屏幕 80% 宽高，由外层 flex 布局居中 */
 .console-root {
+    position: relative;
     width: 80%;
     height: 80%;
     flex-direction: column;
@@ -87,6 +88,7 @@
 
 /* ===== 内容区 ===== */
 .console-body {
+    position: relative;
     flex-direction: column;
     flex-grow: 1;
     min-height: 0;
@@ -316,4 +318,66 @@
     background-color: rgba(0, 0, 0, 0);
     color: rgb(232, 235, 241);
     font-size: 15px;
+}
+
+/* ===== 命令扫描 loading ===== */
+.console-loading-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background-color: rgba(16, 18, 24, 0.72);
+}
+
+.console-loading-spinner {
+    width: 28px;
+    height: 28px;
+    border-width: 3px;
+    border-color: rgba(76, 141, 255, 0.25);
+    border-top-color: rgb(76, 141, 255);
+    border-radius: 14px;
+    margin-bottom: 10px;
+}
+
+.console-loading-text {
+    font-size: 14px;
+    color: rgb(157, 166, 181);
+}
+
+/* ===== 命令补全建议 ===== */
+.console-suggestions {
+    position: absolute;
+    left: 12px;
+    right: 12px;
+    bottom: 40px;
+    flex-direction: column;
+    background-color: rgb(24, 27, 34);
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.10);
+    border-radius: 6px;
+    padding-top: 4px;
+    padding-bottom: 4px;
+}
+
+.console-suggestion-item {
+    padding-top: 5px;
+    padding-bottom: 5px;
+    padding-left: 10px;
+    padding-right: 10px;
+    font-size: 14px;
+    color: rgb(205, 211, 221);
+}
+
+.console-suggestion-item:hover {
+    background-color: rgba(76, 141, 255, 0.22);
+    color: rgb(255, 255, 255);
+}
+
+.console-suggestion-item-selected {
+    background-color: rgba(76, 141, 255, 0.34);
+    color: rgb(255, 255, 255);
 }
