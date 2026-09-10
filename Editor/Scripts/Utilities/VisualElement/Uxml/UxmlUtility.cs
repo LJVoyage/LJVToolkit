@@ -1,5 +1,6 @@
 using System.IO;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using UnityEditor;
 using UnityEditor.PackageManager;
 using UnityEngine;
@@ -31,16 +32,25 @@ namespace VoyageForge.Depot.Editor.Utilities
         /// 内部会自动提取资源名用于名称匹配。
         /// </param>
         /// <param name="scope">搜索范围：PackageOnly 或 Global</param>
+        /// <param name="ownerAssembly">
+        /// 调用方所属程序集，用于定位调用方所在的包/Assets 范围；传 null 时自动取调用方程序集。
+        /// </param>
         /// <returns>相对路径（可直接用于 AssetDatabase.LoadAssetAtPath），未找到返回 null</returns>
-        public static string FindUxmlPath(string fileNameOrPath, SearchScope scope = SearchScope.PackageOnly)
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        public static string FindUxmlPath(string fileNameOrPath, SearchScope scope = SearchScope.PackageOnly, Assembly ownerAssembly = null)
         {
+            // 跨程序集兼容：未显式传入时使用“调用方程序集”，
+            // 这样 Bridge 等其它程序集调用本工具时，会按其所在的包/Assets 搜索，
+            // 而不是按本工具类所在的 Depot 程序集搜索。
+            ownerAssembly = ownerAssembly ?? Assembly.GetCallingAssembly();
+
             // 兼容模式：调用方可能误传相对路径或带扩展名的文件名，
             // 这里统一提取为纯资源名，供 AssetDatabase.FindAssets 按名称匹配。
             string fileNameWithoutExtension = NormalizeUxmlName(fileNameOrPath);
 
             string[] searchFolders = null;
 
-            var packageInfo = PackageInfo.FindForAssembly(Assembly.GetExecutingAssembly());
+            var packageInfo = PackageInfo.FindForAssembly(ownerAssembly);
 
             if (scope == SearchScope.PackageOnly)
             {
@@ -124,12 +134,18 @@ namespace VoyageForge.Depot.Editor.Utilities
         /// </summary>
         /// <param name="fileNameOrPath">文件名或相对路径（见 <see cref="FindUxmlPath"/>）。</param>
         /// <param name="scope"></param>
+        /// <param name="ownerAssembly">调用方所属程序集；传 null 时自动取调用方程序集。</param>
         /// <returns></returns>
         /// <exception cref="FileNotFoundException"></exception>
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public static VisualTreeAsset LoadVisualTreeAsset(string fileNameOrPath,
-            SearchScope scope = SearchScope.PackageOnly)
+            SearchScope scope = SearchScope.PackageOnly, Assembly ownerAssembly = null)
         {
-            var assetPath = FindUxmlPath(fileNameOrPath, scope);
+            // 捕获“调用 LoadVisualTreeAsset 的调用方程序集”，
+            // 并显式下传给 FindUxmlPath，避免在其内部再取到本类所在的 Depot 程序集。
+            ownerAssembly = ownerAssembly ?? Assembly.GetCallingAssembly();
+
+            var assetPath = FindUxmlPath(fileNameOrPath, scope, ownerAssembly);
 
             if (!string.IsNullOrEmpty(assetPath))
             {

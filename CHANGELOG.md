@@ -2,6 +2,11 @@
 
 本文件由开发者手动维护，发布流程不会自动生成或修改此文件。
 
+## v0.0.20
+
+### Changed
+- `UxmlUtility` 支持跨程序集定位：按调用方所在的包 / Assets 搜索 UXML 文件，嵌入 Assets 或作为 UPM 包安装（`com.voyageforge.depot` / `com.voyageforge.bridge`）都能正确找到。
+
 ## v0.0.19
 
 ### Changed
