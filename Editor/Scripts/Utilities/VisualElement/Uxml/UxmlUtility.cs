@@ -1,4 +1,4 @@
-﻿using System.IO;
+using System.IO;
 using System.Reflection;
 using UnityEditor;
 using UnityEditor.PackageManager;
@@ -25,11 +25,19 @@ namespace VoyageForge.Depot.Editor.Utilities
         /// <summary>
         /// 根据指定的搜索范围查找 UXML 文件。
         /// </summary>
-        /// <param name="fileNameWithoutExtension">文件名（不含 .uxml）</param>
+        /// <param name="fileNameOrPath">
+        /// 文件名或相对路径。既可以是纯文件名（如 "DepotProjectSettings"），
+        /// 也可以是带 .uxml 扩展名或完整相对路径（如 "Assets/.../DepotProjectSettings.uxml"）；
+        /// 内部会自动提取资源名用于名称匹配。
+        /// </param>
         /// <param name="scope">搜索范围：PackageOnly 或 Global</param>
         /// <returns>相对路径（可直接用于 AssetDatabase.LoadAssetAtPath），未找到返回 null</returns>
-        public static string FindUxmlPath(string fileNameWithoutExtension, SearchScope scope = SearchScope.PackageOnly)
+        public static string FindUxmlPath(string fileNameOrPath, SearchScope scope = SearchScope.PackageOnly)
         {
+            // 兼容模式：调用方可能误传相对路径或带扩展名的文件名，
+            // 这里统一提取为纯资源名，供 AssetDatabase.FindAssets 按名称匹配。
+            string fileNameWithoutExtension = NormalizeUxmlName(fileNameOrPath);
+
             string[] searchFolders = null;
 
             var packageInfo = PackageInfo.FindForAssembly(Assembly.GetExecutingAssembly());
@@ -77,18 +85,51 @@ namespace VoyageForge.Depot.Editor.Utilities
             return path.EndsWith(".uxml") ? path : null;
         }
 
+        /// <summary>
+        /// 兼容处理：把“相对路径 / 带扩展名文件名”统一转换为纯资源名（不含目录、不含扩展名）。
+        /// 例如 "Assets/Depot/Editor/Scripts/Utilities/DepotProjectSettings.uxml" → "DepotProjectSettings"，
+        /// "DepotProjectSettings.uxml" → "DepotProjectSettings"，
+        /// "DepotProjectSettings" → "DepotProjectSettings"。
+        /// AssetDatabase.FindAssets 的名称过滤只匹配资源名（不含路径和扩展名），
+        /// 因此这里必须先去掉目录与扩展名，否则永远匹配不到。
+        /// </summary>
+        /// <param name="fileNameOrPath">文件名或相对路径。</param>
+        /// <returns>可用于 AssetDatabase.FindAssets 名称过滤的资源名。</returns>
+        private static string NormalizeUxmlName(string fileNameOrPath)
+        {
+            if (string.IsNullOrWhiteSpace(fileNameOrPath))
+            {
+                return fileNameOrPath;
+            }
+
+            // 判断是否为路径：包含目录分隔符（正斜杠或反斜杠）即视为路径。
+            bool isPath = fileNameOrPath.Contains('/') || fileNameOrPath.Contains('\\');
+
+            // Path.GetFileNameWithoutExtension 对“裸文件名 / 带扩展名文件名 / 相对路径”三种形式都能正确提取：
+            // 取路径末段，并去掉最后一个扩展名。
+            string assetName = Path.GetFileNameWithoutExtension(fileNameOrPath);
+
+            // 仅在确认为路径时输出一次兼容提示，便于排查调用方是否误传路径。
+            if (isPath)
+            {
+                Debug.Log($"[UxmlUtility] 传入的是相对路径（{fileNameOrPath}），已兼容提取文件名：{assetName}");
+            }
+
+            return assetName;
+        }
+
 
         /// <summary>
         ///  在包内加载 UXML 文件（默认行为）。
         /// </summary>
-        /// <param name="fileNameWithoutExtension"></param>
+        /// <param name="fileNameOrPath">文件名或相对路径（见 <see cref="FindUxmlPath"/>）。</param>
         /// <param name="scope"></param>
         /// <returns></returns>
         /// <exception cref="FileNotFoundException"></exception>
-        public static VisualTreeAsset LoadVisualTreeAsset(string fileNameWithoutExtension,
+        public static VisualTreeAsset LoadVisualTreeAsset(string fileNameOrPath,
             SearchScope scope = SearchScope.PackageOnly)
         {
-            var assetPath = FindUxmlPath(fileNameWithoutExtension, scope);
+            var assetPath = FindUxmlPath(fileNameOrPath, scope);
 
             if (!string.IsNullOrEmpty(assetPath))
             {
@@ -99,7 +140,7 @@ namespace VoyageForge.Depot.Editor.Utilities
                 }
             }
 
-            throw new FileNotFoundException($"无法找到 UXML 资源：{fileNameWithoutExtension}");
+            throw new FileNotFoundException($"无法找到 UXML 资源：{fileNameOrPath}");
         }
     }
 }
