@@ -1,4 +1,4 @@
-﻿# Depot
+# Depot
 
 ## 简介
 Depot 是 VoyageForge 的基础工具仓库，定位为 Unity 开发过程中的公共物资库。
@@ -7,6 +7,7 @@ Depot 是 VoyageForge 的基础工具仓库，定位为 Unity 开发过程中的
 
 ## 当前内容
 - 运行时通用能力，例如数学工具、单例基类、场景引用与状态机辅助。
+- 基于 UI Toolkit 的运行时控制台，用于在运行时查看 Debug 日志、按类型过滤与执行简单命令。
 - Android 原生能力封装，例如后台保活、APK 安装、系统设置跳转与后续可扩展的移动端桥接能力。
 - 编辑器辅助能力，例如只读属性绘制、Project Settings 配置、构建前自动版本处理与启动项控制。
 - 面向包开发的基础设施，例如程序集划分、打包元数据与工作流配置。
@@ -16,6 +17,10 @@ Depot 是 VoyageForge 的基础工具仓库，定位为 Unity 开发过程中的
   Depot 的运行时通用工具目录。
 - `Runtime/Scripts/Attributes`
   运行时可用的特性定义。
+- `Runtime/Scripts/Console`
+  基于 UI Toolkit（UXML + USS）的运行时控制台实现。
+- `Runtime/Resources/Depot/Console`
+  运行时控制台的 UXML 与 USS 资源。
 - `Runtime/Scripts/Android`
   Unity C# 侧的 Android 原生能力调用封装。
 - `Runtime/Plugins/Android/VoyageForgeAndroidCore.androidlib`
@@ -34,6 +39,80 @@ Depot 是 VoyageForge 的基础工具仓库，定位为 Unity 开发过程中的
 - 把零散的共用工具统一沉淀到一个稳定的仓库模块中。
 - 尽量让运行时工具与编辑器工具边界清晰，便于裁剪与维护。
 - 为其他包提供可复用的底层支持，而不是把通用能力散落到业务代码中。
+
+## 运行时 Console
+
+`RuntimeConsole` 是基于 UI Toolkit（UXML + USS）实现的运行时控制台，用于在真机或运行时直接查看 `Debug.Log` / `LogWarning` / `LogError` / `Exception` 输出。
+
+### 使用方式
+
+`RuntimeConsole` 继承自 Depot 的 `MonoSingleton`，可被继承。推荐在业务侧用 `[RuntimeInitializeOnLoadMethod]` 初始化——此时只创建实例、**不显示**面板，运行后连按 3 次 `Tab` 键唤醒/切换显隐。
+
+```csharp
+using UnityEngine;
+using VoyageForge.Depot.Runtime.Console;
+
+public static class ConsoleBootstrap
+{
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
+    private static void Init()
+    {
+        // 创建单例并初始化（默认隐藏），不会显示面板
+        RuntimeConsole.Initialize();
+    }
+}
+```
+
+也可以直接把 `RuntimeConsole` 挂到场景中的 GameObject 上（会自动添加 `UIDocument`），或通过 `RuntimeConsole.Instance` 惰性创建。
+
+```csharp
+// 显示 / 隐藏 / 切换
+RuntimeConsole.ShowInstance();
+RuntimeConsole.HideInstance();
+RuntimeConsole.ToggleInstance();
+
+// 清空日志
+RuntimeConsole.Instance.Clear();
+
+// 注册自定义命令（命令输入框回车执行）
+RuntimeConsole.RegisterCommand("hello", args => Debug.Log("Hello " + string.Join(" ", args)));
+```
+
+### 生命周期
+
+`RuntimeConsole` 复用 `MonoSingleton` 的生命周期，并额外提供控制台专属钩子：
+
+| 钩子 | 说明 |
+| --- | --- |
+| `OnInitialize()` | MonoSingleton 初始化回调（Awake 阶段调用），完成面板构建与命令注册；派生类重写时需调用 `base.OnInitialize()`。 |
+| `OnConsoleInitialized()` | 面板构建完成、内置命令注册后调用。 |
+| `OnVisibilityChanged(bool)` | 显隐状态变化时调用。 |
+| `OnLogReceived(ConsoleLogEntry)` | 每条日志写入缓冲后调用。 |
+| `OnAwake()` / `OnApplicationQuitting()` / `OnDestroying()` | 继承自 MonoSingleton，可按需重写。 |
+
+### 面板能力
+
+| 能力 | 说明 |
+| --- | --- |
+| 唤醒 | 连按 3 次 `Tab` 键切换显隐（次数与间隔窗口可配置）。 |
+| 日志捕获 | 自动订阅 `Application.logMessageReceived`，缓冲最近 300 条（`_maxEntries` 可调）。 |
+| 类型过滤 | All / Log / Warning / Error 四档过滤。 |
+| 堆栈展开 | 点击日志条目展开/收起调用堆栈。 |
+| 拖拽 | 拖动顶部标题栏移动面板。 |
+| 折叠 | 点击标题栏 `-` 按钮折叠/展开面板。 |
+| 清空 | 点击 `Clear` 按钮或执行 `clear` 命令。 |
+| 命令输入 | 底部输入框回车执行命令，内置 `help`、`clear`、`log`。 |
+
+### 目录
+
+| 路径 | 说明 |
+| --- | --- |
+| `Runtime/Scripts/Console/ConsoleLogEntry.cs` | 日志条目模型与过滤类型。 |
+| `Runtime/Scripts/Console/RuntimeConsole.cs` | 运行时控制台组件。 |
+| `Runtime/Resources/Depot/Console/RuntimeConsole.uxml` | 控制台布局。 |
+| `Runtime/Resources/Depot/Console/RuntimeConsole.uss` | 控制台样式。 |
+
+> 组件优先加载 `Runtime/Resources/Depot/Console/RuntimeConsole.asset`（PanelSettings，参考分辨率 1200×800）作为面板设置；若该资源缺失，会回退到运行时创建的默认 `ScaleWithScreenSize` 设置（1920×1080）。若为 `UIDocument` 指定了自己的 `PanelSettings`，则优先使用已指定的设置。
 
 ## Android 原生插件
 

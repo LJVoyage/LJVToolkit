@@ -1,6 +1,6 @@
 {
   "name": "com.voyageforge.depot",
-  "version": "0.0.16",
+  "version": "0.0.17",
   "displayName": "Depot",
   "description": "Voyage Depot is a shared utility stockroom for Unity projects, collecting reusable runtime helpers, editor tooling, and common extensions.",
   "unity": "2022.3",
@@ -41,6 +41,11 @@
       "displayName": "Shader Sample",
       "description": "Provides URP shaders including AnimatedSpriteSheet and CommonUI template.",
       "path": "Samples~/Shader"
+    },
+    {
+      "displayName": "Runtime Console Sample",
+      "description": "Demonstrates initializing the runtime console from a [RuntimeInitializeOnLoadMethod] and waking it with a triple Tab press.",
+      "path": "Samples~/Console"
     }
   ]
 }

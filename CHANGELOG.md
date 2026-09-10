@@ -1,3 +1,9 @@
+## v0.0.17
+- feat(runtime): 新增基于 UI Toolkit（UXML + USS）的运行时控制台 RuntimeConsole
+- feat(runtime): 支持日志捕获、类型过滤、折叠、拖拽、清空与命令输入
+- feat(runtime): 控制台改为连按 3 次 Tab 键唤醒/切换显隐
+- feat(runtime): RuntimeConsole 改用 MonoSingleton 并支持继承，提供初始化与显隐等生命周期钩子
+- feat(samples): 新增运行时控制台示例
 ## v0.0.16
 - chore(depot): set version to 0.0.16
 - 函数静态化## v0.0.15
