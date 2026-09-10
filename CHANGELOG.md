@@ -2,6 +2,11 @@
 
 本文件由开发者手动维护，发布流程不会自动生成或修改此文件。
 
+## v0.0.18
+
+### Fixed
+- 修复控制台 `PanelSettings` 使用 Unity 默认主题样式表导致的样式错误：新增 `RuntimeConsole.tss` 自定义主题样式表，并将 `themeUss` 指向它。
+
 ## v0.0.17
 
 ### Added
@@ -10,16 +15,12 @@
 - 命令补全：输入命令名时自动弹出前缀匹配建议，支持上下方向键选择、`Tab` 填入、双击 `Tab` 全选。
 - 命令后台扫描：命令在后台线程反射发现，不阻塞主线程，扫描期间显示 loading 并禁用输入。
 - 新增命令系统 EditMode 测试用例。
-- 新增 `RuntimeConsole.tss` 自定义主题样式表。
 
 ### Changed
 - `FileBrowser` 重构为 `LabelGroup`，并新增 `PathInputField`。
 - `FileBrowser` 原型改为外部 CSS/JS 动态渲染。
 - UXML 加载工具重构，并新增 `FileBrowser` 窗口。
 - 发布流程改为手动维护 CHANGELOG。
-
-### Fixed
-- 修复控制台 `PanelSettings` 使用 Unity 默认主题样式表导致的样式错误：将 `themeUss` 指向自定义 `RuntimeConsole.tss`。
 
 ## v0.0.16
 
