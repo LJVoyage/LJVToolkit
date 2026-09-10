@@ -1,4 +1,4 @@
-﻿name: Publish Depot
+name: Publish Depot
 
 on:
   workflow_dispatch:
@@ -15,7 +15,6 @@ jobs:
     runs-on: ubuntu-latest
     env:
       PACKAGE_JSON_PATH: package.json
-      CHANGELOG_PATH: CHANGELOG.md
 
     steps:
       - name: Checkout repository
@@ -57,33 +56,6 @@ jobs:
           git commit -m "chore(depot): set version to ${NEW_VER}" || echo "No changes to commit"
           git push origin HEAD:main
 
-      - name: Generate changelog
-        shell: bash
-        run: |
-          NEW_VER="${{ steps.version.outputs.new_version }}"
-          LAST_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
-
-          if [ -n "$LAST_TAG" ]; then
-            git log "$LAST_TAG"..HEAD --pretty=format:"- %s" > CHANGELOG_TEMP.md
-          else
-            echo "- Initial release" > CHANGELOG_TEMP.md
-          fi
-
-          {
-            echo "## v${NEW_VER}"
-            cat CHANGELOG_TEMP.md
-            if [ -f "${CHANGELOG_PATH}" ]; then
-              cat "${CHANGELOG_PATH}"
-            fi
-          } > TEMP_CHANGELOG.md
-
-          mv TEMP_CHANGELOG.md "${CHANGELOG_PATH}"
-          rm -f CHANGELOG_TEMP.md
-
-          git add "${CHANGELOG_PATH}"
-          git commit -m "chore(depot): update changelog for v${NEW_VER}" || echo "No changes to commit"
-          git push origin HEAD:main
-
       - name: Create Git tag
         shell: bash
         run: |
@@ -113,4 +85,4 @@ jobs:
           echo "Version successfully synced with tag."
 
       - name: Done
-        run: echo "Publish pipeline completed successfully. OpenUPM will automatically build the new version once the tag is pushed."
+        run: echo "Publish pipeline completed successfully. CHANGELOG.md is maintained manually. OpenUPM will automatically build the new version once the tag is pushed."

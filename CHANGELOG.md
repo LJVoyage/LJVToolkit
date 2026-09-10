@@ -1,67 +1,81 @@
-## v0.0.17
-- feat(runtime): 新增基于 UI Toolkit（UXML + USS）的运行时控制台 RuntimeConsole
-- feat(runtime): 支持日志捕获、类型过滤、折叠、拖拽、清空与命令输入
-- feat(runtime): 控制台改为连按 3 次 Tab 键唤醒/切换显隐
-- feat(runtime): RuntimeConsole 改用 MonoSingleton 并支持继承，提供初始化与显隐等生命周期钩子
-- feat(samples): 新增运行时控制台示例
+# Changelog
+
+本文件由开发者手动维护，发布流程不会自动生成或修改此文件。
+
+## Unreleased
+
+### Added
+- 新增基于 UI Toolkit（UXML + USS）的运行时控制台 `RuntimeConsole`：捕获 `Debug.Log/Warning/Error/Exception`，支持级别过滤与计数、堆栈展开、标题栏拖拽、命令输入（`help`/`clear`/`log`），连按 3 次 `Tab` 键唤醒/隐藏。
+
+### Changed
+- `FileBrowser` 重构为 `LabelGroup`，并新增 `PathInputField`。
+- `FileBrowser` 原型改为外部 CSS/JS 动态渲染。
+- UXML 加载工具重构，并新增 `FileBrowser` 窗口。
+
 ## v0.0.16
-- chore(depot): set version to 0.0.16
-- 函数静态化## v0.0.15
-- chore(depot): set version to 0.0.15
-- 优化 Singleton
-- 优化 mono singleton## v0.0.14
-- chore(depot): set version to 0.0.14
-- mono 单例 允许自定义名称
-- 添加readme文档## v0.0.13
-- chore(depot): set version to 0.0.13
-- 资源路径脚本生成器## v0.0.12
-- chore(depot): set version to 0.0.12
-- 移动 alias 路径，实现 forgeMetaDatabase## v0.0.11
-- chore(depot): set version to 0.0.11
-- 修复 unityGui 报错问题## v0.0.10
-- chore(depot): set version to 0.0.10
-- 等第一帧渲染完全结束后 在自动 安装 Harmony
-- Merge remote-tracking branch 'origin/main'
-- 添加 泛型事件中心
-- chore: sync main back to dev## v0.0.9
-- chore(depot): set version to 0.0.9
-- chore: merge dev into main
-- update v
-- m
-- 通过分支清理优化发布流程## v0.0.8
-- chore(depot): set version to 0.0.8
-- Merge pull request #1 from VoyageForge/release/v0.0.7
-- chore(release): bump version to 0.0.7
-- Update publish workflow to streamline version release
-- Modify publish workflow to update version and changelog
-- 更新发布流程以包含基础分支输入
-- chore: sync main back to dev
-- chore: editor alias improvements
-- 添加 GitHub Actions 工作流以实现自动化发布
-- feat(editor)：添加项目浏览器资源别名系统 - 添加 AliasData 以存储按 GUID 标识的别名条目 - 添加 AliasDatabase 从 ProjectSettings 配置中加载别名 - 添加 Harmony 装修以拦截项目浏览器标签的渲染（DrawIconAndLabel 和 GetCroppedLabelText），并用配置的别名替换资源名称 - 添加初始别名验证的测试装修 - 使用 GUID 作为资源标识，使别名在文件移动和重命名后仍能保留
-- 重构项目浏览器别名系统：采用JSON持久化和静态数据库 - 将 ScriptableObject 配置替换为基于 JSON 的 ProjectBrowserAliasConfig - 重构 ProjectBrowserAliasDatabase 为静态类，并实现配置缓存 - 添加 GUIContentTempPatch，用于基于 Harmony 的 GUI 内容替换 - 添加 ProjectBrowserAliasUtility，用于资源路径和 GUID 的转换 - 移除已弃用的 ProjectBrowserAliasPatch 和 ProjectBrowserAliasService - 删除旧的 .asset 配置，改用 ProjectSettings 的 JSON 存储
-- chore（编辑器）：添加 ProjectBrowserAlias 文件夹结构## v0.0.7
-- Update publish workflow to streamline version release
-- Modify publish workflow to update version and changelog
-- 更新发布流程以包含基础分支输入
-- chore: sync main back to dev
-- chore: editor alias improvements
-- 添加 GitHub Actions 工作流以实现自动化发布
-- feat(editor)：添加项目浏览器资源别名系统 - 添加 AliasData 以存储按 GUID 标识的别名条目 - 添加 AliasDatabase 从 ProjectSettings 配置中加载别名 - 添加 Harmony 装修以拦截项目浏览器标签的渲染（DrawIconAndLabel 和 GetCroppedLabelText），并用配置的别名替换资源名称 - 添加初始别名验证的测试装修 - 使用 GUID 作为资源标识，使别名在文件移动和重命名后仍能保留
-- 重构项目浏览器别名系统：采用JSON持久化和静态数据库 - 将 ScriptableObject 配置替换为基于 JSON 的 ProjectBrowserAliasConfig - 重构 ProjectBrowserAliasDatabase 为静态类，并实现配置缓存 - 添加 GUIContentTempPatch，用于基于 Harmony 的 GUI 内容替换 - 添加 ProjectBrowserAliasUtility，用于资源路径和 GUID 的转换 - 移除已弃用的 ProjectBrowserAliasPatch 和 ProjectBrowserAliasService - 删除旧的 .asset 配置，改用 ProjectSettings 的 JSON 存储
-- chore（编辑器）：添加 ProjectBrowserAlias 文件夹结构## v0.0.6
-- chore(depot): set version to 0.0.6
-- chore: add CHANGELOG.md.meta## v0.0.5
-- chore(depot): set version to 0.0.5
-- ci: add version guard to prevent rollback on main
-- chore(depot): update changelog for v0.0.4
-- chore(depot): set version to 0.0.4
-- Merge dev into main
-- feat: add IsInitialized, HasInstance, IsDestroying lifecycle flags to Singleton and MonoSingleton
-- Merge branch 'dev'
-- chore: remove Runtime/Plugins/Android/_Disabled.meta## v0.0.4
-- chore(depot): set version to 0.0.4
-- Merge dev into main - accept CHANGELOG.md deletion
-- feat: add IsInitialized, HasInstance, IsDestroying lifecycle flags to Singleton and MonoSingleton
-- Merge branch 'dev'
-- chore: remove Runtime/Plugins/Android/_Disabled.meta
+
+- 函数静态化。
+
+## v0.0.15
+
+- 优化 Singleton。
+- 优化 MonoSingleton。
+
+## v0.0.14
+
+- MonoSingleton 允许自定义名称。
+- 新增 README 文档。
+
+## v0.0.13
+
+- 新增资源路径脚本生成器。
+
+## v0.0.12
+
+- 移动 alias 路径，实现 ForgeMetaDatabase。
+
+## v0.0.11
+
+- 修复 Unity GUI 报错问题。
+
+## v0.0.10
+
+- 等第一帧渲染完全结束后再自动安装 Harmony。
+
+## v0.0.9
+
+- 新增泛型事件中心。
+
+## v0.0.8
+
+- 新增项目浏览器资源别名系统（ProjectBrowserAlias）。
+- 新增 GitHub Actions 自动化发布流程。
+- 通过分支清理优化发布流程。
+
+## v0.0.6
+
+- 添加 CHANGELOG.md 的 meta 文件。
+
+## v0.0.5
+
+- 新增版本回滚保护（version-guard）CI。
+
+## v0.0.4
+
+- Singleton / MonoSingleton 新增 `IsInitialized`、`HasInstance`、`IsDestroying` 生命周期标志。
+- 移除已禁用的 AndroidX Core AAR 文件。
+
+## v0.0.3
+
+- 新增 Android 诊断日志、保活、通知支持。
+- 新增 Singleton 泛型类。
+- 新增编辑器文件选择工具窗口（UXML/USS）。
+- 新增 Newtonsoft.Json 的 Vector3Converter。
+- 新增 GIF 转序列帧工具与 Built-in/URP UI Shader 模板。
+- 重构 DepotSettingsProvider。
+- 优化版本解析逻辑。
+- 示例目录结构标准化。
+
+## v0.0.2
+
+- 完成 Depot 包命名、版本号、作者与发布流程的初始对齐。
