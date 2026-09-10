@@ -627,7 +627,12 @@ namespace VoyageForge.Depot.Runtime.Console
             }
 
             bool wasShown = IsShown;
-            _consoleRoot.style.display = visible ? DisplayStyle.Flex : DisplayStyle.None;
+
+            // 显示/隐藏整个面板。_panel 是占满屏幕的透明容器，
+            // 若只隐藏 _consoleRoot，_panel 仍会拦截后方 UI 的指针输入，因此要一并隐藏。
+            DisplayStyle display = visible ? DisplayStyle.Flex : DisplayStyle.None;
+            _panel.style.display = display;
+            _consoleRoot.style.display = display;
 
             // 显示时刷新列表，并让命令输入框自动获得焦点
             if (visible)
