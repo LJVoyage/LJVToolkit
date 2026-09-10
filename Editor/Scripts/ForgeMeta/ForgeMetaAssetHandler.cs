@@ -71,6 +71,8 @@ namespace VoyageForge.Depot.Editor
                 if (File.Exists(path))
                     File.Delete(path);
             }
+            
+            
         }
     }
 }

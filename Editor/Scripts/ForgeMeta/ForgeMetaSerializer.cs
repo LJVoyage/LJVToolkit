@@ -13,29 +13,27 @@ namespace VoyageForge.Depot.Editor
         /// <summary>将元数据序列化到指定文件路径（迭代实现）</summary>
         public static void Serialize(string filePath, ForgeMetadata data)
         {
-            using (var writer = new StreamWriter(filePath, false, Encoding.UTF8))
+            using var writer = new StreamWriter(filePath, false, Encoding.UTF8);
+            // 写入版本和 GUID 作为顶层键
+            writer.WriteLine($"v: {data.version}");
+            writer.WriteLine($"guid: {data.guid ?? ""}");
+
+            // 使用栈进行深度优先遍历
+            var stack = new Stack<(int indent, string key, object value)>();
+            PushDictionaryItems(stack, data.fields, 0);
+
+            while (stack.Count > 0)
             {
-                // 写入版本和 GUID 作为顶层键
-                writer.WriteLine($"v: {data.version}");
-                writer.WriteLine($"guid: {data.guid ?? ""}");
+                var (indent, key, value) = stack.Pop();
 
-                // 使用栈进行深度优先遍历
-                var stack = new Stack<(int indent, string key, object value)>();
-                PushDictionaryItems(stack, data.fields, 0);
-
-                while (stack.Count > 0)
+                if (value is Dictionary<string, object> nested)
                 {
-                    var (indent, key, value) = stack.Pop();
-
-                    if (value is Dictionary<string, object> nested)
-                    {
-                        writer.WriteLine($"{new string(' ', indent * 2)}{key}:");
-                        PushDictionaryItems(stack, nested, indent + 1);
-                    }
-                    else
-                    {
-                        writer.WriteLine($"{new string(' ', indent * 2)}{key}: {value}");
-                    }
+                    writer.WriteLine($"{new string(' ', indent * 2)}{key}:");
+                    PushDictionaryItems(stack, nested, indent + 1);
+                }
+                else
+                {
+                    writer.WriteLine($"{new string(' ', indent * 2)}{key}: {value}");
                 }
             }
         }
@@ -97,6 +95,7 @@ namespace VoyageForge.Depot.Editor
                     versionParsed = true;
                     continue;
                 }
+
                 if (!guidParsed && key == "guid")
                 {
                     data.guid = value;
@@ -131,6 +130,7 @@ namespace VoyageForge.Depot.Editor
                         else
                             break;
                     }
+
                     if (hasChildren)
                     {
                         var nested = new Dictionary<string, object>();

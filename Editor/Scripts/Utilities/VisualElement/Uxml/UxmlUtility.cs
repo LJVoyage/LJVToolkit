@@ -45,7 +45,7 @@ namespace VoyageForge.Depot.Editor.Utilities
                 {
                     // 当前脚本不在任何 Package 中（例如放在 Assets 下）→ 回退到 Assets 文件夹
                     searchFolders = new[] { "Assets" };
-                    Debug.Log("当前脚本不在 Package 中，将在 Assets 文件夹下搜索 UXML。");
+                    Debug.LogWarning("当前脚本不在 Package 中，将在 Assets 文件夹下搜索 UXML。");
                 }
             }
             // else Global → searchFolders 保持 null，即搜索整个项目

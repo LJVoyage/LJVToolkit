@@ -8,7 +8,7 @@ namespace VoyageForge.Depot.Editor
     /// ForgeMeta 示例菜单，展示嵌套字段的各种重载用法。
     /// 菜单路径：VoyageForge > Depot > ForgeMeta
     /// </summary>
-    public class ForgeMetaExample
+    public static class ForgeMetaExample
     {
         [MenuItem("VoyageForge/Depot/ForgeMeta/设置元数据（合并路径）")]
         static void SetMerged()

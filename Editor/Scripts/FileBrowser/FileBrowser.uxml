@@ -3,7 +3,7 @@
     <Style
         src="project://database/Assets/Editor/Scripts/FileBrowser/FileBrowser.uss?fileID=7433441132597879392&amp;guid=829ef7446ce84217801145be55aafe02&amp;type=3#FileBrowser" />
     <ui:VisualElement name="fileBrowser" class="fileBrowser">
-        <VoyageForge.Depot.Editor.ProjectBrowser.FileLabel name="file-label" class="file-label" />
+        <VoyageForge.Depot.Editor.ProjectBrowser.LabelGroup name="file-label" class="file-label" />
 
         <!--        <ui:VisualElement name="fileBrowser-label-container" class="label-container">-->
         <!--            <ui:VisualElement name="fileBrowser-label-item" class="fileBrowser-label-item" />-->

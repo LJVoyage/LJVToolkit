@@ -2,13 +2,10 @@
 :root {
     flex-grow: 1;
     flex-direction: row;
-
     height: 100%;
-
     align-items: stretch;
 }
 
 .label-item {
     flex-direction: row;
-    height: 100%;
 }
