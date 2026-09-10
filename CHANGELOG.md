@@ -2,15 +2,20 @@
 
 本文件由开发者手动维护，发布流程不会自动生成或修改此文件。
 
-## Unreleased
+## v0.0.17
 
 ### Added
-- 新增基于 UI Toolkit（UXML + USS）的运行时控制台 `RuntimeConsole`：捕获 `Debug.Log/Warning/Error/Exception`，支持级别过滤与计数、堆栈展开、标题栏拖拽、命令输入（`help`/`clear`/`log`），连按 3 次 `Tab` 键唤醒/隐藏。
+- 新增基于 UI Toolkit（UXML + USS）的运行时控制台 `RuntimeConsole`：捕获 `Debug.Log/Warning/Error/Exception`，支持级别过滤与计数、堆栈展开、标题栏拖拽，连按 3 次 `Tab` 键唤醒/隐藏。
+- 控制台命令系统：基于 `ConsoleCommand` 基类 + `[Preserve]` 特性 + 反射自动发现，内置 `help` / `clear` / `log` / `exit` 命令。
+- 命令补全：输入命令名时自动弹出前缀匹配建议，支持上下方向键选择、`Tab` 填入、双击 `Tab` 全选。
+- 命令后台扫描：命令在后台线程反射发现，不阻塞主线程，扫描期间显示 loading 并禁用输入。
+- 新增命令系统 EditMode 测试用例。
 
 ### Changed
 - `FileBrowser` 重构为 `LabelGroup`，并新增 `PathInputField`。
 - `FileBrowser` 原型改为外部 CSS/JS 动态渲染。
 - UXML 加载工具重构，并新增 `FileBrowser` 窗口。
+- 发布流程改为手动维护 CHANGELOG。
 
 ## v0.0.16
 
