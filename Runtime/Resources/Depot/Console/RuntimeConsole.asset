@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 19101, guid: 0000000000000000e000000000000000, type: 0}
   m_Name: RuntimeConsole
   m_EditorClassIdentifier: 
-  themeUss: {fileID: -4733365628477956816, guid: ae3042ad692100b4cb9aabcc63641316, type: 3}
+  themeUss: {fileID: -4733365628477956816, guid: 0654f1c9aed921e47898f6b403bd4210, type: 3}
   m_TargetTexture: {fileID: 0}
   m_ScaleMode: 1
   m_ReferenceSpritePixelsPerUnit: 100
